@@ -175,36 +175,44 @@
   <h3>Monolito Modular ← Nuestra elección</h3>
   <p>Un punto medio pragmático: <strong>un solo proceso desplegable</strong> con <strong>módulos internos bien delimitados</strong>. Cada módulo tiene su propio dominio, interfaces claras y puede eventualmente extraerse como servicio.</p>
 
-  <div class="compare">
-    <div class="compare-header" style="background:var(--surface2);">Característica</div>
-    <div class="compare-header" style="background:var(--surface2);">Monolito Trad.</div>
-    <div class="compare-header" style="background:var(--surface2);">Microservicios</div>
-    <div class="compare-header" style="background:var(--surface2);">Monolito Modular</div>
-    <div class="compare-cell">Despliegue</div>
-    <div class="compare-cell good">Simple</div>
-    <div class="compare-cell bad">Complejo</div>
-    <div class="compare-cell good">Simple</div>
-    <div class="compare-cell">Modularidad</div>
-    <div class="compare-cell bad">Baja</div>
-    <div class="compare-cell good">Alta</div>
-    <div class="compare-cell good">Alta</div>
-    <div class="compare-cell">Consistencia</div>
-    <div class="compare-cell good">ACID nativo</div>
-    <div class="compare-cell bad">Eventual (SAGAs)</div>
-    <div class="compare-cell good">ACID + SAGAs acotados</div>
-    <div class="compare-cell">Complejidad ops</div>
-    <div class="compare-cell good">Baja</div>
-    <div class="compare-cell bad">Muy alta</div>
-    <div class="compare-cell good">Baja</div>
-    <div class="compare-cell">Desarrollo paralelo</div>
-    <div class="compare-cell bad">Difícil</div>
-    <div class="compare-cell good">Fácil</div>
-    <div class="compare-cell good">Posible</div>
-    <div class="compare-cell">Refactoring</div>
-    <div class="compare-cell bad">Difícil</div>
-    <div class="compare-cell mid">Requiere contractos</div>
-    <div class="compare-cell mid">Controlado</div>
+  <div class="compare-container">
+  <div class="compare-grid">
+    <div class="compare-header">Característica</div>
+    <div class="compare-header">Monolito Trad.</div>
+    <div class="compare-header">Microservicios</div>
+    <div class="compare-header">Monolito Modular</div>
+
+    <div class="compare-label">Despliegue</div>
+    <div class="compare-cell status-good">Unificado y Simple</div>
+    <div class="compare-cell status-bad">Independiente (Complejo)</div>
+    <div class="compare-cell status-good">Unificado (Simple)</div>
+
+    <div class="compare-label">Modularidad</div>
+    <div class="compare-cell status-bad">Baja (Código acoplado)</div>
+    <div class="compare-cell status-good">Extrema (Física)</div>
+    <div class="compare-cell status-good">Alta (Lógica)</div>
+
+    <div class="compare-label">Datos</div>
+    <div class="compare-cell status-good">ACID Fuerte</div>
+    <div class="compare-cell status-bad">Eventual (Sagas/Eventos)</div>
+    <div class="compare-cell status-mid">ACID (con límites)</div>
+
+    <div class="compare-label">Escalabilidad</div>
+    <div class="compare-cell status-mid">Vertical (Toda la app)</div>
+    <div class="compare-cell status-good">Horizontal (Por servicio)</div>
+    <div class="compare-cell status-mid">Vertical / Selectiva</div>
+
+    <div class="compare-label">Ops / Infra</div>
+    <div class="compare-cell status-good">Mínima</div>
+    <div class="compare-cell status-bad">Orquestación (K8s/Red)</div>
+    <div class="compare-cell status-good">Baja/Media</div>
+
+    <div class="compare-label">Mantenimiento</div>
+    <div class="compare-cell status-bad">Pesadilla</div>
+    <div class="compare-cell status-mid">Cambios de Contrato</div>
+    <div class="compare-cell status-good">Controlado y Seguro</div>
   </div>
+</div>
 </section>
 
 <!-- ══════════════════════════════════════════ -->
