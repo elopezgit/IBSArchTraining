@@ -1,54 +1,100 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 3. TRADE-OFFS -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="tradeoffs">
   <span class="section-number">// 03</span>
   <h2 class="section-title">Trade-offs Arquitectónicos</h2>
-  <p class="section-subtitle">Toda decisión arquitectónica tiene un precio. El trabajo es conocer cuál.</p>
+  <p class="section-subtitle">"Everything in software architecture is a trade-off." — Mark Richards</p>
 
-  <p>Un trade-off es intercambiar una ventaja por otra. <strong>No existen decisiones gratuitas en arquitectura.</strong></p>
+  <div class="card accent-blue" style="margin-bottom: 40px;">
+    <h4>La Primera Ley de la Arquitectura</h4>
+    <p>Si alguien cree haber encontrado una solución que no tiene desventajas, es muy probable que aún no las haya identificado. <strong>No existen las "mejores prácticas", solo existen los trade-offs.</strong></p>
+  </div>
 
-  <h3>Ejemplo Real: ¿SAGAs o Transacciones Distribuidas?</h3>
+  <h3>Ejemplo Core: ¿SAGAs o Transacciones Distribuidas?</h3>
+  <p>En la modernización de IBS, la integridad de los datos es sagrada. Pero cómo la logramos define la agilidad del sistema.</p>
 
   <div class="card-grid cols-2">
     <div class="card accent-green">
-      <h4>✅ SAGA (elegido para IBS)</h4>
-      <p><strong>Ventajas:</strong> Alta disponibilidad, bajo acoplamiento, no bloquea recursos.</p>
-      <p><strong>Costos:</strong> Consistencia eventual, necesita compensaciones, mayor complejidad de desarrollo.</p>
+      <div class="badge badge-green" style="margin-bottom: 10px;">Elegido para IBS</div>
+      <h4>✅ SAGA (Coreografía/Orquestación)</h4>
+      <p><strong>Ventajas:</strong> Alta disponibilidad, bajo acoplamiento entre módulos, el sistema no se detiene si un servicio falla.</p>
+      <p><strong>Costos:</strong> Consistencia eventual (el saldo puede tardar ms en actualizarse), requiere lógica de compensación (rollback manual).</p>
     </div>
     <div class="card" style="border-color:rgba(248,113,113,.3)">
+      <div class="badge" style="background: rgba(248,113,113,.1); color: #f87171; margin-bottom: 10px;">Descartado por Escala</div>
       <h4>❌ 2PC (Two-Phase Commit)</h4>
-      <p><strong>Ventajas:</strong> Consistencia ACID garantizada, más simple de razonar.</p>
-      <p><strong>Costos:</strong> Bloqueo de recursos, baja disponibilidad si un servicio falla, no escala.</p>
+      <p><strong>Ventajas:</strong> Consistencia ACID garantizada de forma nativa, programar es más sencillo (parece una DB única).</p>
+      <p><strong>Costos:</strong> "Protocolo del suspenso": si un nodo falla, todos se bloquean. Muy baja performance en alta carga.</p>
     </div>
   </div>
 
-  <h3>Framework de Análisis de Trade-offs</h3>
-  <p>Para cualquier decisión, evaluar estas tres dimensiones (Head First SA):</p>
+  
+
+  <h3>Matriz de Decisión: Monolito vs. Microservicios</h3>
+  <p>Un trade-off clásico que evaluamos para el diseño del <strong>Monolito Modular</strong> de IBS:</p>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Atributo</th>
+          <th>Monolito (Modular)</th>
+          <th>Microservicios</th>
+          <th>Ganador en IBS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Costo de Despliegue</strong></td>
+          <td>Bajo (Una unidad)</td>
+          <td>Alto (Infra compleja)</td>
+          <td>Monolito</td>
+        </tr>
+        <tr>
+          <td><strong>Aislamiento de Errores</strong></td>
+          <td>Medio</td>
+          <td>Máximo</td>
+          <td>Microservicios</td>
+        </tr>
+        <tr>
+          <td><strong>Facilidad de Testeo</strong></td>
+          <td>Alta</td>
+          <td>Baja (E2E complejo)</td>
+          <td>Monolito</td>
+        </tr>
+        <tr>
+          <td><strong>Escalabilidad</strong></td>
+          <td>Por instancia</td>
+          <td>Por servicio</td>
+          <td>Microservicios</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Framework de Análisis (Head First SA)</h3>
+  <p>Para cualquier decisión técnica en el proyecto, evaluamos estas tres dimensiones:</p>
 
   <div class="card-grid cols-3">
     <div class="card">
       <div class="card-icon">🎯</div>
       <h4>¿Estratégico o Táctico?</h4>
-      <p>Estratégico = largo plazo, muchos stakeholders, difícil de cambiar → <span class="badge badge-blue">Arquitectura</span></p>
+      <p>¿Afecta a todo el ciclo de vida de IBS 2026 o solo a un requerimiento puntual de un sprint?</p>
     </div>
     <div class="card">
       <div class="card-icon">⚙️</div>
-      <h4>¿Cuánto esfuerzo para cambiar?</h4>
-      <p>Alto esfuerzo = decisión arquitectónica. Bajo esfuerzo = decisión de diseño.</p>
+      <h4>Costo del Cambio</h4>
+      <p>¿Qué tan difícil será revertir esta decisión en 2 años? Si el costo es prohibitivo, es una decisión de arquitectura.</p>
     </div>
     <div class="card">
       <div class="card-icon">⚖️</div>
-      <h4>¿Trade-offs significativos?</h4>
-      <p>Más trade-offs → más análisis requerido → más arquitectónica la decisión.</p>
+      <h4>Impacto Cruzado</h4>
+      <p>¿Mejorar la seguridad aquí degradará la latencia percibida por el usuario (P95)?</p>
     </div>
   </div>
 
   <div class="callout tip">
     <div class="callout-icon">💡</div>
     <div class="callout-text">
-      <strong>Consejo práctico para IBS:</strong> Ante cada decisión técnica, documentarla como ADR (Architecture Decision Record) con: contexto, opciones consideradas, decisión tomada y trade-offs aceptados. Esto previene re-debates y aclara el razonamiento para nuevos integrantes.
+      <strong>ADR (Architecture Decision Record):</strong> No confíes en la memoria. Si elegimos <em>Outbox Pattern</em> sobre <em>Direct Messaging</em>, debe quedar un documento breve con el contexto y los trade-offs aceptados. El "yo del futuro" te lo agradecerá.
     </div>
   </div>
 </section>
