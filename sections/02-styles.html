@@ -1,91 +1,107 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 2. ESTILOS ARQUITECTÓNICOS -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="styles">
   <span class="section-number">// 02</span>
   <h2 class="section-title">Estilos Arquitectónicos</h2>
-  <p class="section-subtitle">Monolito, Microservicios y Monolito Modular — por qué elegimos el tercero</p>
+  <p class="section-subtitle">Monolito, Microservicios y Monolito Modular — Por qué la pragmática vence al hype.</p>
 
-  <h3>Monolito Tradicional</h3>
-  <p>Toda la aplicación como una sola unidad desplegable, con código fuertemente acoplado. Es el punto de partida de IBS actual (PowerBuilder + Sybase).</p>
+  <p>La elección de un estilo no es estética, es una respuesta a los <strong>Atributos de Calidad</strong> priorizados. Para IBS 2026, el equilibrio entre mantenibilidad y consistencia de datos es el norte.</p>
+
+  <h3>1. Monolito Tradicional (Big Ball of Mud)</h3>
+  <p>Toda la aplicación es una sola unidad donde los límites son difusos. Es el estado actual de IBS: PowerBuilder interactuando directamente con Stored Procedures que cruzan dominios sin control.</p>
 
   <div class="diagram">
-    <div class="diagram-title">Monolito Tradicional — IBS Legado</div>
+    <div class="diagram-title">Anatomía del Problema: IBS Legado</div>
     <pre class="ascii">
 ┌─────────────────────────────────────────────────────┐
-│                   MONOLITO IBS ACTUAL               │
+│             MONOLITO IBS ACTUAL (Acoplado)          │
 │                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐ │
-│  │Clientes  │  │ Pagos    │  │  Contabilidad     │ │
-│  │ (PB UI)  │  │ (PB UI)  │  │  (PB UI)          │ │
-│  └────┬─────┘  └────┬─────┘  └─────┬─────────────┘ │
-│       │             │               │               │
-│       └─────────────┴───────────────┘               │
-│                     │                               │
-│             ┌───────▼──────────┐                    │
-│             │  Stored Procs    │  ◄── ~70% lógica   │
-│             │  (Sybase)        │     de negocio     │
-│             └───────┬──────────┘                    │
-│                     │                               │
-│             ┌───────▼──────────┐                    │
-│             │  Base de datos   │                    │
-│             │  Sybase          │                    │
-│             └──────────────────┘                    │
+│   UI (PB) ──────┐    Lógica Cruzada   ┌────── UI    │
+│   Clientes      └──────┐  en SPs  ┌───┘ Contabilidad│
+│                        ▼          ▼                 │
+│               ┌───────────────────────────┐         │
+│               │   TABLAS COMPARTIDAS      │         │
+│               │ (Riesgo de Efecto Cascada)│         │
+│               └───────────────────────────┘         │
 └─────────────────────────────────────────────────────┘
-    Problema: todo acoplado, cambios rompen todo
-</pre>
+    </pre>
+    <p style="font-size: 0.85em; color: var(--muted); text-align: center;">Consecuencia: Un cambio en "Préstamos" puede corromper la "Contabilidad" por un SP compartido.</p>
   </div>
 
-  <h3>Microservicios</h3>
-  <p>Servicios independientes, cada uno con su propia BD y ciclo de deploy. Máxima flexibilidad pero alta complejidad operativa.</p>
+  <h3>2. Microservicios (La Gran Descomposición)</h3>
+  <p>Divide la aplicación en servicios independientes por red. Aunque es el estándar de la industria para escalabilidad extrema, tiene un "impuesto" muy alto para un núcleo bancario.</p>
+
+  
 
   <div class="callout warn">
     <div class="callout-icon">⚠️</div>
     <div class="callout-text">
-      <strong>¿Por qué NO microservicios para IBS?</strong> La contabilidad bancaria requiere consistencia fuerte (ACID). Coordinar transacciones distribuidas entre docenas de microservicios introduce una complejidad enorme. Además, ~70% de la lógica está en stored procedures cross-domain, lo que hace el corte de servicios extremadamente difícil.
+      <strong>La Falacia de los Microservicios en Banca:</strong> Según Sam Newman, si no puedes desplegar un servicio sin desplegar los demás, tienes un <em>Monolito Distribuido</em> (lo peor de ambos mundos). Dada la interdependencia de la lógica en Sybase, ir directo a microservicios causaría una latencia de red inasumible y problemas de integridad transaccional imposibles de rastrear.
     </div>
   </div>
 
-  <h3>Monolito Modular ← Nuestra elección</h3>
-  <p>Un punto medio pragmático: <strong>un solo proceso desplegable</strong> con <strong>módulos internos bien delimitados</strong>. Cada módulo tiene su propio dominio, interfaces claras y puede eventualmente extraerse como servicio.</p>
+  <h3>3. Monolito Modular: El "Sweet Spot" de IBS</h3>
+  <p>Implementamos una arquitectura <strong>Modular Monolith</strong>. Es un solo proceso de ejecución (.NET 8), pero con separación lógica estricta mediante proyectos y namespaces que respetan los <strong>Bounded Contexts</strong> de DDD.</p>
 
-  <div class="compare-container">
-  <div class="compare-grid">
-    <div class="compare-header">Característica</div>
-    <div class="compare-header">Monolito Trad.</div>
-    <div class="compare-header">Microservicios</div>
-    <div class="compare-header">Monolito Modular</div>
-
-    <div class="compare-label">Despliegue</div>
-    <div class="compare-cell status-good">Unificado y Simple</div>
-    <div class="compare-cell status-bad">Independiente (Complejo)</div>
-    <div class="compare-cell status-good">Unificado (Simple)</div>
-
-    <div class="compare-label">Modularidad</div>
-    <div class="compare-cell status-bad">Baja (Código acoplado)</div>
-    <div class="compare-cell status-good">Extrema (Física)</div>
-    <div class="compare-cell status-good">Alta (Lógica)</div>
-
-    <div class="compare-label">Datos</div>
-    <div class="compare-cell status-good">ACID Fuerte</div>
-    <div class="compare-cell status-bad">Eventual (Sagas/Eventos)</div>
-    <div class="compare-cell status-mid">ACID (con límites)</div>
-
-    <div class="compare-label">Escalabilidad</div>
-    <div class="compare-cell status-mid">Vertical (Toda la app)</div>
-    <div class="compare-cell status-good">Horizontal (Por servicio)</div>
-    <div class="compare-cell status-mid">Vertical / Selectiva</div>
-
-    <div class="compare-label">Ops / Infra</div>
-    <div class="compare-cell status-good">Mínima</div>
-    <div class="compare-cell status-bad">Orquestación (K8s/Red)</div>
-    <div class="compare-cell status-good">Baja/Media</div>
-
-    <div class="compare-label">Mantenimiento</div>
-    <div class="compare-cell status-bad">Pesadilla</div>
-    <div class="compare-cell status-mid">Cambios de Contrato</div>
-    <div class="compare-cell status-good">Controlado y Seguro</div>
+  <div class="card accent-blue">
+    <h4>¿Por qué es nuestra elección?</h4>
+    <ul>
+      <li><strong>Consistencia Local:</strong> Podemos usar transacciones de base de datos estándar (ACID) entre tablas del mismo módulo.</li>
+      <li><strong>Refactorización Segura:</strong> Si un límite de módulo está mal definido, mover código dentro de un monolito es simple; en microservicios requiere meses de migración de APIs.</li>
+      <li><strong>Camino a Nube:</strong> Cada módulo está diseñado para que, si en el futuro "Pagos" necesita escalar más que el resto, pueda extraerse a un microservicio físico sin cambiar su lógica interna.</li>
+    </ul>
   </div>
-</div>
+
+  
+
+  <h3>Comparativa Técnica: La Matriz de Estilos</h3>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Característica</th>
+          <th>Monolito Trad.</th>
+          <th>Microservicios</th>
+          <th>Monolito Modular</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Despliegue</strong></td>
+          <td class="status-good">Simple (1 unidad)</td>
+          <td class="status-bad">Complejo (N unidades)</td>
+          <td class="status-good">Simple (1 unidad)</td>
+        </tr>
+        <tr>
+          <td><strong>Modularidad</strong></td>
+          <td class="status-bad">Inexistente</td>
+          <td class="status-good">Física (Red)</td>
+          <td class="status-good">Lógica (Contratos)</td>
+        </tr>
+        <tr>
+          <td><strong>Transacciones</strong></td>
+          <td class="status-good">ACID Simple</td>
+          <td class="status-bad">Sagas (Complejo)</td>
+          <td class="status-good">ACID (Módulo)</td>
+        </tr>
+        <tr>
+          <td><strong>Latencia</strong></td>
+          <td class="status-good">Nula (In-memory)</td>
+          <td class="status-bad">Alta (Red/IO)</td>
+          <td class="status-good">Nula (In-memory)</td>
+        </tr>
+        <tr>
+          <td><strong>Barrera de Entrada</strong></td>
+          <td class="status-good">Baja</td>
+          <td class="status-bad">Muy Alta</td>
+          <td class="status-mid">Media (Requiere disciplina)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-icon">💡</div>
+    <div class="callout-text">
+      <strong>Regla de Oro en IBS:</strong> "Modularidad sobre Despliegue". Primero aprendamos a separar el código lógicamente (Monolito Modular). Solo cuando el costo de coordinación de equipo sea mayor al costo de infraestructura, pensaremos en Microservicios físicos.
+    </div>
+  </div>
 </section>
