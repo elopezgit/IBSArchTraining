@@ -1,64 +1,114 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 4. ATRIBUTOS DE CALIDAD -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="quality">
   <span class="section-number">// 04</span>
   <h2 class="section-title">Atributos de Calidad</h2>
-  <p class="section-subtitle">Las "-ilities" que definen si el sistema es exitoso, más allá de la funcionalidad</p>
+  <p class="section-subtitle">Las "-ilities": El verdadero trabajo del arquitecto</p>
 
-  <p>Los atributos de calidad (también llamados <em>non-functional requirements</em> o <em>architectural characteristics</em>) son los criterios de éxito del sistema que <strong>no dependen de la funcionalidad</strong>. Para IBS, el Blueprint define:</p>
+  <p>En el proyecto IBS, los atributos de calidad no son deseos; son <strong>restricciones de diseño</strong>. Como dice Mark Richards: <em>"La arquitectura de software es la selección de las características más importantes del sistema antes de escribir la primera línea de código"</em>.</p>
+
+  <div class="card accent-blue" style="margin-bottom: 30px;">
+    <h4>El Catálogo de Características Arquitectónicas</h4>
+    <p>Hemos priorizado estos 6 atributos basándonos en el perfil de riesgo bancario de IBS:</p>
+  </div>
 
   <div class="card-grid cols-3">
     <div class="card accent-blue">
       <div class="card-icon">⚡</div>
       <h4>Performance</h4>
-      <p>Latencia y tiempo de respuesta. IBS mide p95/p99 por transacción crítica. Meta: &lt;500ms en transacciones OLTP.</p>
+      <p>No es solo "velocidad". En IBS medimos <strong>Latencia</strong> (tiempo de respuesta) y <strong>Throughput</strong> (operaciones/seg). <br><strong>Meta:</strong> p95 < 500ms en transacciones de Core.</p>
     </div>
     <div class="card accent-green">
       <div class="card-icon">🔄</div>
       <h4>Disponibilidad</h4>
-      <p>Uptime del sistema, generalmente en "nines" (99.9% = 8.7hs downtime/año). Crítico para operación bancaria.</p>
+      <p>Capacidad de operar ante fallas. Apuntamos a "Tres Nueves" (99.9%). Requiere redundancia y mecanismos de <em>failover</em> automáticos.</p>
     </div>
     <div class="card accent-purple">
       <div class="card-icon">📈</div>
       <h4>Escalabilidad</h4>
-      <p>Mantener performance bajo carga creciente. Diferente de elasticidad (respuesta a bursts).</p>
+      <p>Capacidad de manejar carga. En el Monolito Modular de IBS, escalamos <strong>Verticalmente</strong> (más recursos) y <strong>Horizontalmente</strong> (más instancias del monolito).</p>
     </div>
     <div class="card accent-orange">
       <div class="card-icon">🔒</div>
-      <h4>Seguridad</h4>
-      <p>Autenticación, autorización, segregación de funciones, auditoría. Por diseño, no como parche.</p>
+      <h4>Seguridad / Audit</h4>
+      <p>Integridad de datos y trazabilidad. Cada cambio de saldo debe tener un <strong>Audit Trail</strong> inmutable. Seguridad por diseño (Zero Trust).</p>
     </div>
     <div class="card accent-pink">
       <div class="card-icon">🔧</div>
       <h4>Mantenibilidad</h4>
-      <p>Facilidad de modificar el sistema sin efectos secundarios. Los bounded contexts del monolito modular la favorecen.</p>
+      <p>Bajo acoplamiento y alta cohesión. Medimos esto mediante la <strong>Complejidad Ciclomática</strong> y la separación de capas en .NET.</p>
     </div>
     <div class="card">
-      <div class="card-icon">🌱</div>
-      <h4>Flexibilidad / Agilidad</h4>
-      <p>Capacidad de responder a cambios de negocio. Relacionada con testability y deployability.</p>
+      <div class="card-icon">🧪</div>
+      <h4>Testability</h4>
+      <p>Facilidad de validar cambios. Crucial para la migración IBS: sin tests automatizados, el riesgo de regresión bancaria es inaceptable.</p>
     </div>
   </div>
 
-  <h3>Escalabilidad vs Elasticidad — Diferencia clave</h3>
+  <h3>Escalabilidad vs Elasticidad — El enfoque de Kleppmann</h3>
+  <p>Es vital no confundir estos términos al diseñar la infraestructura en la nube para IBS:</p>
 
   <div class="card-grid cols-2">
     <div class="card">
-      <h4>📊 Escalabilidad</h4>
-      <p>Performance consistente ante un <strong>número creciente y sostenido</strong> de usuarios. Ejemplo: el banco agrega 10.000 nuevos clientes.</p>
+      <h4>📊 Escalabilidad (Planificada)</h4>
+      <p>Capacidad del sistema para manejar un <strong>incremento de carga sostenido</strong> (ej. el banco crece de 1M a 5M de clientes) sin degradar la performance.</p>
+      <div class="badge badge-blue">Enfoque: Arquitectura de Datos</div>
     </div>
     <div class="card">
-      <h4>⚡ Elasticidad</h4>
-      <p>Resistencia ante <strong>bursts</strong> de tráfico súbito. Ejemplo: cierre mensual, pago de haberes — todos los cajeros a la vez.</p>
+      <h4>⚡ Elasticidad (Reactiva)</h4>
+      <p>Capacidad de <strong>adquirir y liberar recursos</strong> dinámicamente ante picos de demanda (ej. Cierre de mes o Black Friday).</p>
+      <div class="badge badge-purple">Enfoque: Infraestructura / Cloud</div>
     </div>
   </div>
 
-  <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+  
+
+  <h3>La Matriz de Conflictos (Trade-offs de Atributos)</h3>
+  <p>No se puede tener todo. Al mejorar un atributo, solemos degradar otro:</p>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Acción</th>
+          <th>Atributo Mejorado</th>
+          <th>Atributo Perjudicado</th>
+          <th>Razón Técnica</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Agregar Encriptación</td>
+          <td class="status-good">Seguridad</td>
+          <td class="status-bad">Performance</td>
+          <td>Uso intensivo de CPU por cada I/O.</td>
+        </tr>
+        <tr>
+          <td>Caching Agresivo</td>
+          <td class="status-good">Performance</td>
+          <td class="status-bad">Consistencia</td>
+          <td>Riesgo de leer saldos desactualizados (Stale Data).</td>
+        </tr>
+        <tr>
+          <td>Redundancia de Nodos</td>
+          <td class="status-good">Disponibilidad</td>
+          <td class="status-bad">Costo / Complejidad</td>
+          <td>Doble infraestructura y gestión de quórum.</td>
+        </tr>
+        <tr>
+          <td>Separación en Microservicios</td>
+          <td class="status-good">Agilidad de Equipo</td>
+          <td class="status-bad">Testability E2E</td>
+          <td>Difícil de testear flujos completos por red.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-icon">💡</div>
     <div class="callout-text">
-      <strong>Regla de oro:</strong> No se pueden optimizar todos los atributos simultáneamente. Elegir las 3 más importantes para el sistema y dejar que guíen las decisiones de diseño. Para IBS: <strong>Disponibilidad · Seguridad/Auditoría · Mantenibilidad</strong>.
+      <strong>Veredicto IBS:</strong> En el sistema bancario, la jerarquía es clara: 
+      <strong>1. Seguridad/Consistencia > 2. Disponibilidad > 3. Performance.</strong> 
+      Preferimos un sistema que sea 100ms más lento pero que nunca pierda un centavo o una traza de auditoría.
     </div>
   </div>
 </section>

@@ -1,100 +1,99 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 5. MONOLITO MODULAR -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="modular">
-  <span class="section-number">// 05</span>
-  <h2 class="section-title">Características del Monolito Modular</h2>
-  <p class="section-subtitle">El estilo arquitectónico elegido para el nuevo IBS</p>
+    <span class="section-number">// 05</span>
+    <h2 class="section-title">Arquitectura de Monolito Modular</h2>
+    <p class="section-subtitle">Diseñando para la autonomía de equipos y la integridad bancaria.</p>
 
-  <h3>Definición</h3>
-  <p>Un sistema que se <strong>despliega como una unidad única</strong> pero cuyo código se organiza en <strong>módulos con límites claros</strong>, reglas de dependencia explícitas y ownership definido.</p>
+    <h3>Definición y Filosofía</h3>
+    <p>El Monolito Modular (o <em>Modulith</em>) es un estilo arquitectónico que equilibra la simplicidad operativa de una sola unidad de despliegue con el rigor de separación de intereses de los microservicios. En el proyecto IBS, esto significa que el sistema "grita" su intención de negocio a través de su estructura de carpetas.</p>
 
-  <div class="diagram">
-    <div class="diagram-title">Estructura del Nuevo IBS — Monolito Modular</div>
-    <pre class="ascii">
-┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-         MONOLITO MODULAR — Nuevo IBS (.NET)
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │           CORE DE IBS                           │   │
-│  │  ┌──────────┐ ┌────────┐ ┌──────┐ ┌──────────┐ │   │
-│  │  │Contabilid│ │Clientes│ │Segur.│ │Cálculo/  │ │   │
-│  │  │          │ │        │ │      │ │Config    │ │   │
-│  │  └────▲─────┘ └───▲────┘ └──▲───┘ └────▲─────┘ │   │
-│  └────────┼───────────┼─────────┼──────────┼───────┘   │
-│           │           │         │          │            │
-│  ┌────────▼───────────▼─────────▼──────────▼───────┐   │
-│  │           INTEGRACIONES INTERNAS                │   │
-│  │  [Gestor Eventos]  [Servicios Módulos]  [API GW] │   │
-│  └──────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌──────────────────┐    ┌──────────────────────────┐   │
-│  │    PRODUCTOS     │    │    ANALÍTICA DE DATOS    │   │
-│  │ [CA][CC][Créd.]  │    │  [Data Lake] [Report+IA] │   │
-│  └──────────────────┘    └──────────────────────────┘   │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  MÓDULOS TRANSVERSALES: Observabilidad · Auditoría│   │
-│  └──────────────────────────────────────────────────┘   │
-└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-         Un solo proceso · Módulos aislados
-</pre>
-  </div>
+    <div class="diagram">
+        <div class="diagram-title">Flujo de Comunicación en el Monolito Modular</div>
+        
+        <pre class="ascii">
+┌──────────────────────────────────────────────────────────┐
+│             HOST APPLICATION (.NET 8 Web API)            │
+├──────────────────────────────────────────────────────────┤
+│  ┌──────────────┐      ┌──────────────┐      ┌────────┐  │
+│  │   Módulo     │      │   Módulo     │      │ Módulo │  │
+│  │  Clientes    │◄────►│   Pagos      │◄────►│ Contab.│  │
+│  │ (Encapsulado)│      │ (Encapsulado)│      │        │  │
+│  └──────┬───────┘      └──────┬───────┘      └────┬───┘  │
+└─────────┼─────────────────────┼───────────────────┼──────┘
+          ▼                     ▼                   ▼
+┌───────────────────┐ ┌──────────────────┐ ┌────────────────┐
+│ Schema: Customers │ │ Schema: Payments │ │ Schema: Ledger │
+└───────────────────┘ └──────────────────┘ └────────────────┘
+        </pre>
+        <p style="font-size: 0.85em; color: var(--muted); text-align: center;">Cada módulo posee sus datos (Schemas) y se comunica mediante contratos o eventos internos.</p>
+    </div>
 
-  <h3>Principios Clave</h3>
-  <div class="card-grid cols-2">
-    <div class="card accent-blue">
-      <h4>📦 Alta Cohesión</h4>
-      <p>Todo lo relacionado con un dominio (Pagos, Clientes, Créditos) vive en el mismo módulo. Los cambios de negocio son locales.</p>
+    <h3>Los Pilares de la Independencia</h3>
+    <div class="card-grid cols-2">
+        <div class="card accent-blue">
+            <h4>📦 Aislamiento de Datos</h4>
+            <p><strong>Teoría:</strong> La base de datos es el mayor punto de acoplamiento. <br><strong>Ejemplo IBS:</strong> El módulo de <em>Préstamos</em> no puede hacer un JOIN con la tabla de <em>Clientes</em>. Debe consultar la API interna del módulo o tener una proyección de datos local.</p>
+        </div>
+        <div class="card accent-green">
+            <h4>🔗 Comunicación Inter-Módulo</h4>
+            <p><strong>Teoría:</strong> Inversión de Dependencias (DIP). <br><strong>Ejemplo IBS:</strong> Usamos un <em>In-Memory Event Bus</em> (MediatR) para notificar cambios. "Pago Realizado" dispara "Generar Asiento Contable" sin que el módulo de pagos conozca al contable.</p>
+        </div>
+        <div class="card accent-orange">
+            <h4>🚪 Public API / Contract</h4>
+            <p><strong>Teoría:</strong> Ocultamiento de información. <br><strong>Ejemplo IBS:</strong> Solo el proyecto <code>IBS.Modules.X.Shared</code> es visible para otros módulos. Las implementaciones internas en <code>Infrastructure</code> son privadas (internal en C#).</p>
+        </div>
+        <div class="card accent-purple">
+            <h4>🌱 Límites de Transacción</h4>
+            <p><strong>Teoría:</strong> Consistencia Atómica. <br><strong>Ejemplo IBS:</strong> Una transacción SQL solo puede afectar tablas del <strong>mismo módulo</strong>. Para operaciones cross-module, usamos el patrón Outbox.</p>
+        </div>
     </div>
-    <div class="card accent-green">
-      <h4>🔗 Bajo Acoplamiento</h4>
-      <p>Los módulos se comunican solo a través de interfaces (fachadas) bien definidas. Nunca acceden directamente a tablas de otro módulo.</p>
-    </div>
-    <div class="card accent-orange">
-      <h4>🚪 Encapsulamiento Fuerte</h4>
-      <p>Nada accede al interior de un módulo sino a través de sus contratos. La BD de cada módulo es privada.</p>
-    </div>
-    <div class="card accent-purple">
-      <h4>🌱 Evolución Controlada</h4>
-      <p>Los módulos pueden extraerse como microservicios en el futuro si hay necesidad de escalar. El diseño lo permite sin big-bang.</p>
-    </div>
-  </div>
 
-  <h3>Patrones de Organización del Código</h3>
-  <p>Existen tres formas de organizar código. El Monolito Modular favorece la tercera:</p>
+    <h3>Organización del Código: Capas vs. Módulos</h3>
+    <p>Adoptamos la <strong>Arquitectura Hexagonal</strong> dentro de cada módulo para asegurar que la lógica de negocio bancaria sea testeable e independiente de la infraestructura.</p>
 
-  <div class="card-grid cols-3">
-    <div class="card">
-      <h4>🗂️ Por Capa (legacy)</h4>
-      <pre><code>src/
-  controllers/
-  services/
-  repositories/
-  models/</code></pre>
-      <p style="font-size:12px;margin-top:8px;color:#f87171;">❌ Dificulta el trabajo en features completas</p>
+    <div class="card-grid cols-3">
+        <div class="card">
+            <h4>🗂️ Por Capa (Antipatrón)</h4>
+            <pre><code>src/
+  Controllers/
+  Services/
+  Entities/</code></pre>
+            <p style="font-size:12px;color:var(--muted);">El "Big Ball of Mud". Cambiar un campo en Clientes requiere tocar todas las carpetas del proyecto.</p>
+        </div>
+        <div class="card accent-green">
+            <h4>🧩 Estructura IBS (.NET)</h4>
+            <pre><code>src/Modules/Payments/
+  /Domain    (Reglas)
+  /Application (Uso)
+  /Infrastructure (DB)
+  /API        (Web)</code></pre>
+            <p style="font-size:12px;color:#34d399;">"Screaming Architecture": Al ver la carpeta, entiendes que el sistema gestiona Pagos, no carpetas técnicas.</p>
+        </div>
+        <div class="card">
+            <h4>🧪 Testability</h4>
+            <pre><code>tests/
+  /Payments.Unit
+  /Payments.Integ
+  /ArchTests</code></pre>
+            <p style="font-size:12px;color:var(--muted);">Cada módulo se testea de forma aislada, garantizando que el Core Bancario sea robusto.</p>
+        </div>
     </div>
-    <div class="card">
-      <h4>🏷️ Por Feature</h4>
-      <pre><code>src/
-  customer/
-  payments/
-  accounts/
-  loans/</code></pre>
-      <p style="font-size:12px;margin-top:8px;color:#ffcb6b;">⚡ Mejor pero sin límites de dominio claros</p>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Arquitectura Evolutiva:</strong> El Monolito Modular nos permite empezar con una infraestructura simple. Si el día de mañana el volumen de <em>Tarjetas de Crédito</em> crece exponencialmente, podemos extraer esa carpeta y convertirla en un Microservicio físico con un esfuerzo mínimo de refactorización.
+        </div>
     </div>
-    <div class="card accent-green">
-      <h4>🧩 Por Módulo/Componente</h4>
-      <pre><code>src/
-  modules/
-    payments/
-      domain/
-      app/
-      infra/
-    accounts/
-      ...</code></pre>
-      <p style="font-size:12px;margin-top:8px;color:#34d399;">✅ Límites explícitos, cada módulo independiente</p>
+
+    <div class="card accent-pink">
+      <h4>Ejemplo de Implementación: El "Muro de Contención"</h4>
+      <p>Para evitar que el código se degrade, usamos <strong>NetArchTest</strong> en el CI/CD:</p>
+      <pre style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; font-size: 13px;">
+// Regla de Arquitectura:
+Types.InAssembly(paymentsAssembly)
+     .ShouldNot()
+     .HaveDependencyOn("IBS.Modules.Accounting.Infrastructure")
+     .Check();</pre>
+      <p style="font-size: 13px; margin-top: 10px;">Esto garantiza que el acoplamiento se mantenga en cero mediante pruebas automatizadas.</p>
     </div>
-  </div>
 </section>
