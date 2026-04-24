@@ -1,80 +1,111 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 15. OBSERVABILIDAD -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="observability">
-  <span class="section-number">// 15</span>
-  <h2 class="section-title">Observabilidad</h2>
-  <p class="section-subtitle">Ver qué pasa adentro del sistema sin necesidad de reiniciarlo</p>
+    <span class="section-number">// 15</span>
+    <h2 class="section-title">Observabilidad: El sistema bajo rayos X</h2>
+    <p class="section-subtitle">Monitoreo proactivo para sistemas de alta disponibilidad.</p>
 
-  <p>Observabilidad = capacidad de entender el estado interno de un sistema a partir de sus outputs externos. Los tres pilares son:</p>
+    <p>La observabilidad no es solo "hacer logs". Es la capacidad de responder cualquier pregunta sobre el comportamiento del sistema sin tener que desplegar código nuevo. En el IBS 2026, pasamos del "creo que falló la base de datos" al "el 95% de las peticiones fallan en el módulo de Cuentas por un timeout en la tabla de Reservas".</p>
 
-  <div class="card-grid cols-3">
-    <div class="card accent-blue">
-      <div class="card-icon">📝</div>
-      <h4>Logs Estructurados</h4>
-      <p>Logs en formato JSON (no texto libre). Permiten búsqueda, filtrado y agregación en herramientas como Elasticsearch o Splunk.</p>
+    <h3>Los Tres Pilares (The Golden Signals)</h3>
+    
+    
+
+    <div class="card-grid cols-3">
+        <div class="card accent-blue">
+            <div class="card-icon">📝</div>
+            <h4>Logs Estructurados</h4>
+            <p>Olvidémonos de <code>Console.WriteLine</code>. Usamos <strong>Serilog</strong> para generar JSONs con propiedades. <br><strong>Poder:</strong> Puedes filtrar por <code>ClienteId</code> en segundos entre millones de líneas.</p>
+        </div>
+        <div class="card accent-purple">
+            <div class="card-icon">🔍</div>
+            <h4>Trazas (Distributed Tracing)</h4>
+            <p>Visualiza el viaje de una petición entre módulos. <br><strong>Poder:</strong> Ves exactamente cuántos milisegundos pasó la petición en <em>Pagos</em>, cuántos en <em>Cuentas</em> y cuánto tardó la DB de Sybase.</p>
+        </div>
+        <div class="card accent-green">
+            <div class="card-icon">📊</div>
+            <h4>Métricas</h4>
+            <p>Agregados numéricos. <br><strong>Poder:</strong> Tableros en tiempo real con la cantidad de transacciones por segundo (TPS) y la tasa de error actual.</p>
+        </div>
     </div>
-    <div class="card accent-purple">
-      <div class="card-icon">🔍</div>
-      <h4>Trazabilidad (Tracing)</h4>
-      <p>Seguir una transacción de punta a punta a través de todos los módulos. Requiere propagar un Correlation ID.</p>
-    </div>
-    <div class="card accent-green">
-      <div class="card-icon">📊</div>
-      <h4>Métricas</h4>
-      <p>Datos numéricos en el tiempo: latencia p95/p99, tasa de errores, throughput, uso de memoria. Expuestos via Prometheus/Grafana.</p>
-    </div>
-  </div>
 
-  <h3>Correlation ID — La clave de la trazabilidad</h3>
-  <p>Un identificador único que se genera en la entrada del sistema y se propaga a <strong>todos los módulos, logs y eventos</strong> de esa transacción.</p>
+    <h3>La Columna Vertebral: Correlation ID</h3>
+    <p>En una arquitectura modular, una operación de "Transferencia" genera logs en 4 servicios distintos. Sin un <strong>Correlation ID</strong> (o Trace ID), es imposible unir las piezas.</p>
 
-  <pre data-lang="C# — Correlation ID Middleware"><code><span class="c">// Middleware que asegura que toda request tenga correlation ID</span>
-<span class="k">public class</span> <span class="t">CorrelationIdMiddleware</span>
+    <div class="card">
+        <pre style="background:transparent; padding:0; font-size:13px;"><code><span style="color: #6a9955;">// Implementación automática en .NET 8 usando OpenTelemetry</span>
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource(<span style="color: #ce9178;">"IBS.Core"</span>)
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation() <span style="color: #6a9955;">// Propaga el ID a otros módulos</span>
+        .AddSqlClientInstrumentation()); <span style="color: #6a9955;">// Rastrea tiempos de SQL</span></code></pre>
+    </div>
+
+    <h3>Métricas Críticas (KPIs de Ingeniería)</h3>
+    <p>Para nivelar el contenido, el equipo debe conocer los <strong>"Four Golden Signals"</strong> de Google SRE, adaptados a IBS:</p>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Señal</th>
+                    <th>Qué mide en IBS</th>
+                    <th>Umbral de Alerta</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Latencia (p99)</strong></td>
+                    <td>Tiempo que tarda el 99% de las transferencias.</td>
+                    <td>> 2.0 segundos</td>
+                </tr>
+                <tr>
+                    <td><strong>Tráfico (Throughput)</strong></td>
+                    <td>Cantidad de peticiones por segundo (TPS).</td>
+                    <td>Caída repentina de -30%</td>
+                </tr>
+                <tr>
+                    <td><strong>Errores</strong></td>
+                    <td>Tasa de HTTP 500 o excepciones de negocio.</td>
+                    <td>> 1% de las peticiones</td>
+                </tr>
+                <tr>
+                    <td><strong>Saturación</strong></td>
+                    <td>Uso de CPU/RAM o conexiones al Pool de Sybase.</td>
+                    <td>> 80% de capacidad</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Ejemplo: Del Log al Diagnóstico</h3>
+    <p>Un log estructurado profesional se ve así en nuestra plataforma de observabilidad:</p>
+    
+    <pre style="background: var(--card-bg); padding: 15px; border-radius: 8px; font-size: 12px; color: #dcdcaa;">
 {
-    <span class="k">public async</span> <span class="t">Task</span> <span class="m">InvokeAsync</span>(<span class="t">HttpContext</span> context)
-    {
-        <span class="c">// Tomar del header o generar uno nuevo</span>
-        <span class="k">var</span> correlationId = context.Request.Headers[<span class="s">"X-Correlation-ID"</span>]
-            .<span class="m">FirstOrDefault</span>() ?? <span class="t">Guid</span>.<span class="m">NewGuid</span>().<span class="m">ToString</span>();
-
-        <span class="c">// Disponible en toda la request</span>
-        context.Items[<span class="s">"CorrelationId"</span>] = correlationId;
-        context.Response.Headers[<span class="s">"X-Correlation-ID"</span>] = correlationId;
-
-        <span class="c">// Propagar en todos los logs de esta request</span>
-        <span class="k">using</span> (<span class="t">LogContext</span>.<span class="m">PushProperty</span>(<span class="s">"CorrelationId"</span>, correlationId))
-        {
-            <span class="k">await</span> _next(context);
-        }
-    }
+  "Timestamp": "2026-04-24 16:00:00",
+  "Level": "Error",
+  "Message": "Falla en reserva de saldo para transferencia {TxId}",
+  "Properties": {
+    <span style="color: #4ec9b0;">"CorrelationId": "b55a12...", </span> <span style="color: #6a9955;">// &lt;-- El "hilo" que une todo</span>
+    "Module": "Accounts",
+    "TxId": "TX-9988",
+    "ExecutionTimeMs": 1250,
+    "ErrorCode": "INSUFFICIENT_FUNDS",
+    "Environment": "Production"
+  }
 }
+    </pre>
 
-<span class="c">// Log estructurado — todos llevan CorrelationId</span>
-_logger.<span class="m">Information</span>(
-    <span class="s">"Transferencia {TransferenciaId} ejecutada por {ClienteId} por {Monto}"</span>,
-    transferencia.Id, cmd.ClienteId, cmd.Monto);
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>¿Por qué esto es vital para IBS?</strong> 
+            Cuando migramos módulos de Sybase a .NET, la observabilidad nos permite comparar: "¿Es el nuevo código más rápido que el anterior?". Si no medimos, solo estamos adivinando.
+        </div>
+    </div>
 
-<span class="c">// Output JSON:
-// {
-//   "timestamp": "2026-04-24T...",
-//   "level": "Information",
-//   "message": "Transferencia T-001 ejecutada por C-123 por 1000",
-//   "correlationId": "550e8400-e29b-41d4-a716",
-//   "module": "Pagos",
-//   "transferenciaId": "T-001"
-// }</span>
-</code></pre>
-
-  <h3>KPIs de Observabilidad para IBS (del Blueprint)</h3>
-  <div class="table-wrap">
-    <table>
-      <tr><th>Métrica</th><th>Fórmula</th><th>Cadencia</th></tr>
-      <tr><td>p95/p99 transacciones críticas</td><td>Latencia p95/p99 por tipo de tx</td><td>Semanal</td></tr>
-      <tr><td>Cobertura observabilidad</td><td>Tx con correlation ID / total modernizadas</td><td>Semanal</td></tr>
-      <tr><td>MTTR en piloto</td><td>Tiempo medio de resolución P1/P2</td><td>Semanal</td></tr>
-      <tr><td>Tasa de compensación SAGA</td><td>Compensaciones / ejecuciones SAGA</td><td>Semanal</td></tr>
-    </table>
-  </div>
+    <div class="card accent-pink">
+        <h4>Regla de Oro de Logging:</h4>
+        <p style="font-size: 14px;"><strong>Nunca loguear datos sensibles (PII).</strong> Está prohibido por regulaciones bancarias guardar números de tarjeta, CVV o saldos en texto claro dentro de los logs. Usa máscaras: <code>4532-XXXX-XXXX-1234</code>.</p>
+    </div>
 </section>

@@ -1,8 +1,7 @@
-
 <section class="section" id="glosario">
-    <span class="section-number">// 19</span>
-    <h2 class="section-title">Glosario</h2>
-    <p class="section-subtitle">Diccionario enciclopédico del Programa de Modernización IBS 2026</p>
+    <span class="section-number">// 21</span>
+    <h2 class="section-title">Glosario de Modernización</h2>
+    <p class="section-subtitle">Diccionario técnico y estratégico para la alineación del equipo IBS.</p>
 
     <div class="glosario-container">
         
@@ -10,118 +9,92 @@
             <h3>Estrategia y Gestión</h3>
             <dl class="glosario-list">
                 <dt>Big Bang Migration</dt>
-                <dd>Enfoque de "todo o nada" descartado por su alto riesgo. Se prefiere la migración por oleadas (Waves).</dd>
+                <dd>Sustitución total del sistema en un solo evento. 
+                    <br><em>Ejemplo:</em> "Apagar Sybase el viernes y prender .NET el lunes". Descartado por el alto riesgo de caída del servicio bancario.</dd>
 
-                <dt>Drivers de Esfuerzo</dt>
-                <dd>Factores que determinan el costo del proyecto, como la cantidad de SPs a migrar y la complejidad de los flujos multi-dominio.</dd>
-
-                <dt>Modernización Evolutiva</dt>
-                <dd>Estrategia de cambiar el sistema por partes mientras sigue operando, evitando interrupciones al negocio bancario.</dd>
-
-                <dt>Patrón Strangler (Estrangulador)</dt>
-                <dd>Metodología donde las nuevas funcionalidades en .NET van "envolviendo" al legado hasta que este desaparece.</dd>
+                <dt>Patrón Strangler Fig (Estrangulador)</dt>
+                <dd>Metodología inspirada en plantas que envuelven un árbol viejo hasta reemplazarlo. 
+                    <br><em>Ejemplo:</em> Crear una API en .NET para "Consultar Saldo" mientras el resto del Core sigue en PowerBuilder.</dd>
 
                 <dt>Wave (Oleada)</dt>
-                <dd>Conjunto de releases que agrupan módulos funcionales (ej. Wave 1: Préstamos, Wave 2: Depósitos) según el plan 2026.</dd>
-
-                <dt>WBS (Work Breakdown Structure)</dt>
-                <dd>Descomposición del proyecto en tareas manejables: Gestión, Arquitectura, Plataforma, Datos, Migración y Testing.</dd>
+                <dd>Conjunto de hitos que agrupan funcionalidades relacionadas para reducir dependencias. 
+                    <br><em>Ejemplo:</em> Wave 1 enfocado exclusivamente en canales digitales y consultas de clientes.</dd>
             </dl>
         </div>
 
         <div class="glosario-group">
-            <h3>Arquitectura (Monolito Modular)</h3>
+            <h3>Arquitectura de Software</h3>
             <dl class="glosario-list">
-                <dt>ADR (Architecture Decision Record)</dt>
-                <dd>Registro formal de una decisión técnica para evitar "amnesia colectiva" y re-debates cíclicos.</dd>
-
                 <dt>Anticorruption Layer (ACL)</dt>
-                <dd>Capa que traduce datos del sistema viejo al nuevo, impidiendo que el diseño sucio del legado afecte al código limpio.</dd>
+                <dd>Capa mediadora que traduce los modelos de datos del legado al nuevo diseño. Evita que la "suciedad" del código viejo contamine el nuevo sistema.</dd>
 
-                <dt>Bounded Context</dt>
-                <dd>Límite donde un modelo de datos es consistente. Un módulo de "Clientes" no es igual al de "Riesgos".</dd>
+                <dt>Bounded Context (Contexto Delimitado)</dt>
+                <dd>Frontera lógica donde un término tiene un único significado. 
+                    <br><em>Ejemplo:</em> El término "Cuenta" significa algo distinto para el módulo de <strong>Ahorros</strong> que para el de <strong>Contabilidad</strong>.</dd>
 
-                <dt>Modularidad Fuerte</dt>
-                <dd>Capacidad de cambiar un módulo internamente sin afectar a los demás, lograda mediante interfaces claras.</dd>
-
-                <dt>Quiescence</dt>
-                <dd>Estado de reposo necesario para migrar datos de un módulo sin que haya transacciones activas.</dd>
-
-                <dt>Trade-off</dt>
-                <dd>Decisión donde se gana algo (ej. escalabilidad) perdiendo otra cosa (ej. simplicidad). No hay soluciones perfectas.</dd>
+                <dt>Monolito Modular</dt>
+                <dd>Arquitectura donde el código está unido en el despliegue pero separado físicamente en módulos independientes, permitiendo una migración futura a microservicios sin reescribir todo.</dd>
             </dl>
         </div>
 
         <div class="glosario-group">
-            <h3>Datos e Integración</h3>
+            <h3>Datos, Integración y Resiliencia</h3>
             <dl class="glosario-list">
                 <dt>ACID</dt>
-                <dd>Propiedad no negociable para el Core Bancario: Atomicidad, Consistencia, Aislamiento y Durabilidad.</dd>
+                <dd>Estándar de integridad: 
+                    <strong>Atomicidad</strong> (Todo o nada), 
+                    <strong>Consistencia</strong> (Reglas válidas), 
+                    <strong>Aislamiento</strong> (Sin interferencias) y 
+                    <strong>Durabilidad</strong> (Persistencia ante fallos).</dd>
 
-                <ul>
-                    <li><strong>Atomicidad:</strong> La transacción es indivisible; se completa totalmente o se revierte íntegramente ante cualquier error.</li>
-                    <li><strong>Consistencia:</strong> Asegura que la transacción lleve la base de datos de un estado válido a otro, cumpliendo todas las reglas de integridad bancaria.</li>
-                    <li><strong>Aislamiento:</strong> Las transacciones simultáneas se ejecutan sin interferir entre sí, evitando errores de saldo o lecturas sucias.</li>
-                    <li><strong>Durabilidad:</strong> Una vez confirmada, la transacción persiste de forma permanente, incluso ante fallos críticos de hardware o energía.</li>
-                </ul>
-
-                <dt>Compensación (SAGA)</dt>
-                <dd>Acción de reversa que se ejecuta si un paso intermedio de una transacción distribuida falla.</dd>
-
-                <dt>Consistencia Eventual</dt>
-                <dd>Modelo donde los datos se sincronizan tras un breve lapso de tiempo, aceptable en flujos no contables.</dd>
+                <dt>Circuit Breaker (Disyuntor)</dt>
+                <dd>Patrón de resiliencia que detecta fallos en un servicio externo y detiene las llamadas temporalmente para evitar un colapso en cadena.</dd>
 
                 <dt>Idempotencia</dt>
-                <dd>Garantía de que procesar el mismo mensaje dos veces no duplique el efecto (ej. no cobrar dos veces el mismo interés).</dd>
-
-                <dt>Outbox Pattern</dt>
-                <dd>Técnica para asegurar que los eventos se guarden en la DB antes de enviarse a una cola, evitando pérdida de datos.</dd>
+                <dd>Garantía de que procesar la misma petición dos veces no duplica el efecto. 
+                    <br><em>Ejemplo:</em> Si un cliente da click dos veces al botón de "Pagar", el sistema solo procesa un cobro.</dd>
 
                 <dt>SAGA Pattern</dt>
-                <dd>Gestión de transacciones largas que abarcan múltiples módulos sin usar bloqueos pesados de base de datos.</dd>
-
-                <dt>Schema Firewall</dt>
-                <dd>Reglas y contratos para evitar que aplicaciones externas o procesos legados corrompan el nuevo esquema de datos.</dd>
+                <dd>Gestión de transacciones largas entre módulos. Si un paso falla (ej. falla la contabilidad), se ejecutan <strong>Compensaciones</strong> para revertir pasos previos (ej. devolver el dinero al saldo).</dd>
             </dl>
         </div>
 
         <div class="glosario-group">
-            <h3>Legado y Tecnología</h3>
+            <h3>Seguridad y Observabilidad</h3>
             <dl class="glosario-list">
-                <dt>Coexistencia</dt>
-                <dd>Periodo crítico donde PB y .NET operan sobre la misma base de datos Sybase simultáneamente.</dd>
+                <dt>Correlation ID (Trace ID)</dt>
+                <dd>Identificador único que viaja con una transacción a través de todos los módulos. Permite rastrear un error desde la App móvil hasta la Base de Datos.</dd>
 
+                <dt>JWT (JSON Web Token)</dt>
+                <dd>Estándar seguro para representar la identidad del usuario en cada llamada a la API. Contiene "Claims" (permisos) firmados digitalmente.</dd>
+
+                <dt>Zero Trust (Confianza Cero)</dt>
+                <dd>Filosofía de seguridad donde no se confía en nadie por defecto, incluso si la petición viene de la red interna del banco.</dd>
+            </dl>
+        </div>
+
+        <div class="glosario-group">
+            <h3>Ecosistema Legado</h3>
+            <dl class="glosario-list">
                 <dt>Deuda Técnica</dt>
-                <dd>Costo acumulado por años de parches en PowerBuilder que dificultan el mantenimiento actual.</dd>
+                <dd>El costo acumulado por soluciones rápidas o parches del pasado que hoy dificultan la evolución del sistema.</dd>
 
-                <dt>Lógica In-DB</dt>
-                <dd>Código de negocio escrito directamente en Stored Procedures (SPs), el cual se busca extraer hacia servicios C#.</dd>
-
-                <dt>PowerBuilder (PB)</dt>
-                <dd>Lenguaje del sistema IBS actual. Su obsolescencia es el driver principal del programa de modernización.</dd>
+                <dt>Lógica "In-Database"</dt>
+                <dd>Reglas de negocio atrapadas en Stored Procedures (SPs). El objetivo de 2026 es extraer esta lógica hacia servicios C# testables.</dd>
 
                 <dt>Sybase ASE</dt>
-                <dd>Motor de base de datos actual. La estrategia busca optimizar el acceso desde la nueva arquitectura .NET.</dd>
+                <dd>Motor de base de datos relacional que sustenta el IBS actual. Su optimización es clave durante el periodo de <strong>Coexistencia</strong>.</dd>
             </dl>
         </div>
 
         <div class="glosario-group">
-            <h3>Métricas de Éxito (KPIs)</h3>
+            <h3>Indicadores (KPIs)</h3>
             <dl class="glosario-list">
-                <dt>Defect Leakage</dt>
-                <dd>Porcentaje de fallos que llegan a manos del usuario. Meta: &lt; 5% por cada release.</dd>
-
                 <dt>MTTR (Mean Time To Repair)</dt>
-                <dd>Tiempo promedio de resolución de incidentes críticos (P1/P2) detectados durante el piloto.</dd>
+                <dd>Tiempo promedio en que el equipo resuelve un fallo crítico. Mide la agilidad de respuesta ante crisis.</dd>
 
                 <dt>P95 Latency</dt>
-                <dd>El tiempo de respuesta que no es superado por el 95% de las transacciones. Mide la velocidad real percibida.</dd>
-
-                <dt>Release Readiness Score</dt>
-                <dd>Criterios de salida que incluyen cobertura de tests (>80%), seguridad y performance aprobados.</dd>
-
-                <dt>Tasa de Compensación</dt>
-                <dd>Porcentaje de SAGAs que fallan y requieren reversa. Un número alto indica inestabilidad en el diseño.</dd>
+                <dd>Métrica de velocidad: indica que el 95% de los usuarios experimentan tiempos de respuesta menores a X milisegundos. Es más real que el "promedio".</dd>
             </dl>
         </div>
 

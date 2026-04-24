@@ -1,129 +1,105 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 14. PATRÓN SAGA -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="saga">
-  <span class="section-number">// 14</span>
-  <h2 class="section-title">Patrón SAGA</h2>
-  <p class="section-subtitle">Consistencia en transacciones que tocan múltiples módulos</p>
+    <span class="section-number">// 14</span>
+    <h2 class="section-title">Patrón SAGA</h2>
+    <p class="section-subtitle">Gestionando transacciones distribuidas con integridad bancaria.</p>
 
-  <h3>El Problema: Transacciones Cross-Módulo</h3>
-  <p>En IBS, una transferencia toca Pagos, Cuentas y Contabilidad. No podemos usar una sola transacción ACID porque cada módulo tiene su propia BD (o schema). Necesitamos coordinar <strong>una secuencia de transacciones locales</strong> con capacidad de deshacer los pasos anteriores si algo falla.</p>
+    <p>En el monolito modular, cada módulo tiene su propio "límite de consistencia". No podemos hacer un <code>BEGIN TRANSACTION</code> que abarque Clientes, Cuentas y Contabilidad al mismo tiempo. La <strong>SAGA</strong> es una secuencia de transacciones locales coordinadas que garantiza la <strong>Consistencia Eventual</strong>.</p>
 
-  <h3>¿Qué es una SAGA?</h3>
-  <p>Una secuencia de <strong>transacciones locales</strong>, donde cada paso publica un evento/mensaje que dispara el siguiente. Si un paso falla, se ejecutan <strong>transacciones compensatorias</strong> para deshacer los pasos anteriores.</p>
+    <h3>El Concepto: Acción y Compensación</h3>
+    <p>Cada paso de una SAGA tiene una "acción" (hacer algo) y una "compensación" (deshacerlo si algo sale mal más adelante). Es como reservar un hotel: si el vuelo se cancela, debes cancelar la reserva del hotel para no perder dinero.</p>
 
-  <div class="diagram">
-    <div class="diagram-title">SAGA: Flujo de Transferencia — Camino Feliz</div>
-    <pre class="ascii">
-  API Gateway
-      │
-      ▼
-  ┌─────────────────────────────────────────────────────────────────┐
-  │                  SAGA ORQUESTADOR                               │
-  │                                                                 │
-  │  PASO 1: Validar Cliente (Módulo Clientes)                      │
-  │     ──────────────────────────────► ok                         │
-  │                                                                 │
-  │  PASO 2: Reservar Saldo (Módulo Cuentas)                        │
-  │     ──────────────────────────────► ok (saldo reservado)       │
-  │                                                                 │
-  │  PASO 3: Registrar Pago (Módulo Pagos)                          │
-  │     ──────────────────────────────► ok                         │
-  │                                                                 │
-  │  PASO 4: Postear GL (Módulo Contabilidad)                       │
-  │     ──────────────────────────────► ok                         │
-  │                                                                 │
-  │  PASO 5: Confirmar Saldo (Módulo Cuentas)                       │
-  │     ──────────────────────────────► ok ✅                      │
-  └─────────────────────────────────────────────────────────────────┘
-</pre>
-  </div>
+    
 
-  <div class="diagram">
-    <div class="diagram-title">SAGA: Flujo con Falla — Compensaciones</div>
-    <pre class="ascii">
-  PASO 1: Validar Cliente ──────────────────► ok
-  PASO 2: Reservar Saldo  ──────────────────► ok (saldo reservado)
-  PASO 3: Registrar Pago  ──────────────────► ok
-  PASO 4: Postear GL      ──────── FALLA ❌
-
-  COMPENSACIONES (en orden inverso):
-  COMP-3: Cancelar Pago   ──────────────────► ok
-  COMP-2: Liberar Saldo   ──────────────────► ok (saldo liberado)
-  COMP-1: (no necesaria)
-  
-  Estado final: Todo revertido, cliente notificado del fallo
-</pre>
-  </div>
-
-  <h3>Orquestación vs Coreografía</h3>
-
-  <div class="card-grid cols-2">
-    <div class="card accent-blue">
-      <h4>🎼 Orquestación (elegido IBS)</h4>
-      <p>Un componente central (Saga Orchestrator) coordina los pasos y toma decisiones. Más fácil de entender, testear y monitorear.</p>
-      <pre><code style="font-size:11px;">SagaOrchestrator
-  ├── paso1 → Clientes
-  ├── paso2 → Cuentas
-  └── paso3 → Pagos</code></pre>
+    <div class="card-grid cols-2">
+        <div class="card accent-blue">
+            <h4>🎼 Orquestación (Centralizado)</h4>
+            <p>Un "Cerebro" central dice a cada módulo qué hacer. Es el modelo que usamos en IBS por su <strong>facilidad de auditoría</strong>.</p>
+            <ul style="font-size: 12px;">
+                <li>Ideal para procesos complejos.</li>
+                <li>Fácil de visualizar el estado del proceso.</li>
+                <li>Control total sobre el flujo.</li>
+            </ul>
+        </div>
+        <div class="card accent-purple">
+            <h4>💃 Coreografía (Descentralizado)</h4>
+            <p>Los módulos se pasan "la posta" mediante eventos. No hay un jefe central.</p>
+            <ul style="font-size: 12px;">
+                <li>Más desacoplado.</li>
+                <li>Difícil de debuggear en sistemas bancarios.</li>
+                <li>Riesgo de dependencias cíclicas.</li>
+            </ul>
+        </div>
     </div>
-    <div class="card accent-purple">
-      <h4>💃 Coreografía</h4>
-      <p>Cada servicio reacciona a eventos de los demás. No hay coordinador central. Más flexible pero más difícil de trazar y debuggear.</p>
-      <pre><code style="font-size:11px;">Cuentas emite → Pagos escucha
-Pagos emite → Contabilidad escucha
-(emerge la coordinación)</code></pre>
+
+    <h3>Anatomía de una Transferencia en IBS</h3>
+    <p>Observemos cómo se comporta el sistema ante un fallo en el último paso (Contabilidad):</p>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Paso</th>
+                    <th>Módulo</th>
+                    <th>Acción Positiva</th>
+                    <th>Acción Compensatoria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Cuentas</strong></td>
+                    <td>Reservar Saldo (Estado: Pendiente)</td>
+                    <td>Liberar Reserva</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Pagos</strong></td>
+                    <td>Registrar Orden de Pago</td>
+                    <td>Marcar Pago como Fallido</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Contabilidad</strong></td>
+                    <td>Generar Asiento GL</td>
+                    <td>Generar Asiento de Reversa</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-  </div>
 
-  <h3>Implementación básica en .NET</h3>
-  <pre data-lang="C# — SAGA Orquestada"><code><span class="k">public class</span> <span class="t">TransferenciaSaga</span>
-{
-    <span class="k">private readonly</span> <span class="t">IClientesFacade</span> _clientes;
-    <span class="k">private readonly</span> <span class="t">ICuentasFacade</span> _cuentas;
-    <span class="k">private readonly</span> <span class="t">IPagosFacade</span> _pagos;
-    <span class="k">private readonly</span> <span class="t">ISagaStateRepository</span> _state;
+    <h3>Implementación Profesional: State Machines</h3>
+    <p>En .NET 8, no escribimos <code>try-catch</code> gigantes. Usamos <strong>Máquinas de Estado</strong> que persisten el progreso en la base de datos para que, si el servidor se apaga, la SAGA pueda retomar donde quedó.</p>
 
-    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">SagaResult</span>&gt; <span class="m">Execute</span>(<span class="t">TransferenciaCmd</span> cmd)
-    {
-        <span class="k">var</span> sagaId = <span class="t">Guid</span>.<span class="m">NewGuid</span>();
-        <span class="k">await</span> _state.<span class="m">Save</span>(sagaId, <span class="s">"Iniciada"</span>);
-
-        <span class="c">// PASO 1</span>
-        <span class="k">var</span> kycOk = <span class="k">await</span> _clientes.<span class="m">ValidarKyc</span>(cmd.ClienteId);
-        <span class="k">if</span> (!kycOk) <span class="k">return</span> <span class="t">SagaResult</span>.<span class="m">Failure</span>(<span class="s">"KYC inválido"</span>);
-
-        <span class="c">// PASO 2</span>
-        <span class="k">var</span> reserva = <span class="k">await</span> _cuentas.<span class="m">ReservarSaldo</span>(cmd.CuentaOrigen, cmd.Monto);
-        <span class="k">if</span> (!reserva.Ok) <span class="k">return</span> <span class="t">SagaResult</span>.<span class="m">Failure</span>(<span class="s">"Saldo insuficiente"</span>);
-
-        <span class="k">try</span>
-        {
-            <span class="c">// PASO 3</span>
-            <span class="k">await</span> _pagos.<span class="m">RegistrarPago</span>(cmd, reserva.Id);
-            <span class="c">// PASO 4 (postear GL via evento async)</span>
-            <span class="c">// PASO 5</span>
-            <span class="k">await</span> _cuentas.<span class="m">ConfirmarDebito</span>(reserva.Id);
-            <span class="k">await</span> _state.<span class="m">Save</span>(sagaId, <span class="s">"Completada"</span>);
-            <span class="k">return</span> <span class="t">SagaResult</span>.<span class="m">Success</span>();
-        }
-        <span class="k">catch</span> (<span class="t">Exception</span> ex)
-        {
-            <span class="c">// COMPENSACIONES</span>
-            <span class="k">await</span> _pagos.<span class="m">CancelarPago</span>(reserva.Id);
-            <span class="k">await</span> _cuentas.<span class="m">LiberarReserva</span>(reserva.Id);
-            <span class="k">await</span> _state.<span class="m">Save</span>(sagaId, <span class="s">"Compensada"</span>);
-            <span class="k">return</span> <span class="t">SagaResult</span>.<span class="m">Failure</span>(ex.Message);
-        }
-    }
+    <div class="card">
+        <pre style="background:transparent; padding:0; font-size:13px;"><code><span style="color: #6a9955;">// Ejemplo conceptual de Orquestador persistente</span>
+public class TransferenciaSagaState {
+    public Guid CorrelationId { get; set; }
+    public string CurrentState { get; set; } // "SaldoReservado", "PagoRegistrado"
+    public decimal Monto { get; set; }
 }
-</code></pre>
 
-  <div class="callout warn">
-    <div class="callout-icon">⚠️</div>
-    <div class="callout-text">
-      <strong>Requisito crítico:</strong> Cada paso de la SAGA debe ser <strong>idempotente</strong>. Si el proceso falla a mitad de una compensación, debe poder reintentarse sin duplicar efectos. Por eso se guardan los IDs de reserva y se usa el patrón Outbox para los eventos que disparan cada paso.
+<span style="color: #6a9955;">// Lógica de compensación automática</span>
+if (stepFailed) {
+    await SendCompensatingCommands(sagaState.CorrelationId);
+}</code></pre>
     </div>
-  </div>
+
+    <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-text">
+            <strong>El Peligro del "Zombi":</strong> Sin una SAGA, si el paso 3 falla pero el paso 1 ya debitó el dinero, el cliente pierde sus fondos y el banco queda descuadrado. La SAGA asegura que el dinero <strong>siempre</strong> tenga un destino final válido o regrese a su origen.
+        </div>
+    </div>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Nivelación Pro:</strong> Las SAGAs requieren que cada servicio sea <strong>Idempotente</strong>. Si la orquestación reintenta un paso de compensación, el módulo de Cuentas no debe liberar el saldo dos veces.
+        </div>
+    </div>
+
+    <div class="card accent-green">
+        <h4>Resumen para el equipo:</h4>
+        <p style="font-size: 14px;">La SAGA es lo que convierte una serie de pasos aislados en un <strong>Proceso de Negocio Robusto</strong>. En el nuevo IBS, cada vez que una operación involucre más de un módulo, diseñaremos una SAGA con sus respectivas compensaciones.</p>
+    </div>
 </section>

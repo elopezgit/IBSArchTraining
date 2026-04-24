@@ -1,21 +1,98 @@
-
 <section class="section" id="resilience">
     <span class="section-number">// 18</span>
     <h2 class="section-title">Resiliencia y Estabilidad</h2>
-    <p>Estrategias críticas para asegurar que el IBS no falle ante errores de terceros o alta carga.</p>
+    <p class="section-subtitle">Diseñando para el fallo: El arte de recuperarse con elegancia.</p>
+
+    <p>En el IBS moderno, asumimos que la red es traicionera y que los servicios externos (como el Buró de Crédito o el validador de identidad) fallarán. La resiliencia es la capacidad del sistema de absorber impactos y seguir operando.</p>
+
+    
+
+    <h3>Patrones de Diseño para la Robustez</h3>
     
     <div class="card-grid cols-3">
         <div class="card accent-blue">
-            <h4>Retry Pattern</h4>
-            <p>Reintenta operaciones fallidas transitorias (ej. timeout de red) con <em>Exponential Backoff</em>.</p>
+            <div class="card-icon">🔄</div>
+            <h4>Retry (Reintento)</h4>
+            <p><strong>Filosofía:</strong> "Si fallas, intenta de nuevo, pero con calma". <br>Usamos <em>Exponential Backoff</em>: esperamos 1s, luego 2s, luego 4s... para no "rematar" a un servidor que ya está sufriendo.</p>
         </div>
         <div class="card accent-purple">
+            <div class="card-icon">⚡</div>
             <h4>Circuit Breaker</h4>
-            <p>Evita llamadas a servicios caídos para no saturar el sistema y permitir la recuperación.</p>
+            <p><strong>Filosofía:</strong> "Si el vecino no responde, deja de tocarle el timbre". <br>Si un servicio falla N veces, el circuito se abre y las llamadas fallan instantáneamente, ahorrando recursos y permitiendo que el servicio se cure.</p>
         </div>
         <div class="card accent-green">
-            <h4>Idempotencia</h4>
-            <p>Garantiza que procesar la misma transacción dos veces no duplique los saldos.</p>
+            <div class="card-icon">🛡️</div>
+            <h4>Bulkhead (Mamparos)</h4>
+            <p><strong>Filosofía:</strong> "Si se inunda un compartimento del barco, que no se hunda todo". <br>Aislamos los recursos (hilos/memoria) por módulo. Si <em>Pagos</em> está saturado, <em>Consultas</em> debe seguir funcionando.</p>
         </div>
+    </div>
+
+    <h3>Implementación con Polly en .NET 8</h3>
+    <p>Polly es nuestra herramienta principal. Definimos "Estrategias de Resiliencia" que envuelven nuestras llamadas a otros módulos o servicios externos.</p>
+
+    <div class="card">
+        <pre style="background:transparent; padding:0; font-size:13px;"><code><span style="color: #6a9955;">// Configuración de una política combinada (Resilience Pipeline)</span>
+var pipeline = new ResiliencePipelineBuilder&lt;HttpResponseMessage&gt;()
+    .AddRetry(new RetryStrategyOptions&lt;HttpResponseMessage&gt; {
+        MaxRetryAttempts = 3,
+        BackoffType = DelayBackoffType.Exponential,
+        UseJitter = true <span style="color: #6a9955;">// Añade aleatoriedad para evitar el "thundering herd"</span>
+    })
+    .AddCircuitBreaker(new CircuitBreakerStrategyOptions&lt;HttpResponseMessage&gt; {
+        FailureRatio = 0.5, <span style="color: #6a9955;">// Abre si el 50% de llamadas fallan</span>
+        SamplingDuration = TimeSpan.FromSeconds(30),
+        MinimumThroughput = 10
+    })
+    .Build();
+
+<span style="color: #6a9955;">// Ejecución segura</span>
+await pipeline.ExecuteAsync(async ct => await _httpClient.GetAsync(url, ct));</code></pre>
+    </div>
+
+    <h3>Estrategias de Contingencia (Fallback)</h3>
+    <p>¿Qué hacemos cuando el Circuit Breaker está abierto? Aquí es donde entra el diseño de negocio:</p>
+    
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Servicio Fallido</th>
+                    <th>Estrategia de Fallback (Plan B)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Validador de Identidad</td>
+                    <td>Derivar a validación manual por un operador humano.</td>
+                </tr>
+                <tr>
+                    <td>Motor de Scoring</td>
+                    <td>Usar el último score guardado en caché (si tiene < 24hs).</td>
+                </tr>
+                <tr>
+                    <td>Servicio de Notificaciones</td>
+                    <td>Encolar el mensaje en la base de datos para envío posterior.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout warn">
+        <div class="callout-icon">🚨</div>
+        <div class="callout-text">
+            <strong>Cuidado con el Reintento Infinito:</strong> Reintentar operaciones que no son <strong>Idempotentes</strong> (como un POST de transferencia) sin una llave de idempotencia puede causar duplicidad de cargos. El Retry y la Idempotencia deben ir siempre de la mano.
+        </div>
+    </div>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Observabilidad y Resiliencia:</strong> Cada vez que un Circuit Breaker cambia de estado (de Cerrado a Abierto), debemos disparar una alerta crítica. Es el sistema diciéndonos: "No puedo más, estoy bloqueando tráfico para sobrevivir".
+        </div>
+    </div>
+
+    <div class="card accent-blue">
+        <h4>Resumen de Nivelación:</h4>
+        <p style="font-size: 14px;">Un sistema resiliente no es el que nunca falla, sino el que sabe fallar rápido y recuperarse solo. En IBS, aplicamos <strong>Polly</strong> en cada cliente HTTP y en cada llamada entre módulos para asegurar que un error local no se convierta en una caída nacional.</p>
     </div>
 </section>

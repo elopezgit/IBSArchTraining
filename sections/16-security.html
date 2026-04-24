@@ -1,95 +1,111 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 16. SEGURIDAD -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="security">
-  <span class="section-number">// 16</span>
-  <h2 class="section-title">Seguridad</h2>
-  <p class="section-subtitle">Autenticación, Autorización y Seguridad en APIs</p>
+    <span class="section-number">// 16</span>
+    <h2 class="section-title">Seguridad: Defensas en Profundidad</h2>
+    <p class="section-subtitle">Más allá del Password: Identidad, Permisos y Cumplimiento.</p>
 
-  <div class="card-grid cols-2">
-    <div class="card accent-blue">
-      <div class="card-icon">🔐</div>
-      <h4>Autenticación (AuthN)</h4>
-      <p><strong>¿Quién sos?</strong> Verificar la identidad del usuario o sistema. En IBS: OIDC (OpenID Connect) sobre OAuth 2.0. El usuario se autentica contra un Identity Provider y recibe un JWT.</p>
+    <p>En el IBS, adoptamos el modelo <strong>Zero Trust</strong> (Confianza Cero). Esto significa que no confiamos en nadie, esté dentro o fuera de la red del banco. Cada petición debe demostrar quién es y qué permiso tiene.</p>
+
+    <div class="card-grid cols-2">
+        <div class="card accent-blue">
+            <div class="card-icon">🔐</div>
+            <h4>Autenticación (AuthN)</h4>
+            <p><strong>Identidad:</strong> "Soy el Cajero Juan". <br>Usamos <strong>OIDC</strong>. El sistema no guarda passwords; el Identity Provider (IdP) emite un token JWT firmado digitalmente que viaja en cada request.</p>
+        </div>
+        <div class="card accent-purple">
+            <div class="card-icon">🛡️</div>
+            <h4>Autorización (AuthZ)</h4>
+            <p><strong>Capacidad:</strong> "¿Juan puede transferir $1M?". <br>Usamos <strong>Claims-Based Access Control</strong>. El token contiene "atributos" del usuario que el código valida antes de ejecutar lógica.</p>
+        </div>
     </div>
-    <div class="card accent-purple">
-      <div class="card-icon">🛡️</div>
-      <h4>Autorización (AuthZ)</h4>
-      <p><strong>¿Qué podés hacer?</strong> Verificar que el usuario autenticado tiene permiso para la operación. En IBS: RBAC (Role-Based Access Control) + segregación de funciones.</p>
+
+    
+
+    <h3>El JWT (JSON Web Token) bajo la lupa</h3>
+    <p>En IBS, el token no es solo un string aleatorio; es un contenedor de información segura. Un desarrollador profesional debe saber leer sus partes:</p>
+
+    <div class="card" style="background: #1e1e1e; color: #dcdcaa; font-family: 'Fira Code', monospace; font-size: 13px;">
+        <div>{</div>
+        <div style="padding-left: 20px;">
+            <span style="color: #9cdcfe;">"sub"</span>: "USR-99", <span style="color: #6a9955;">// ID del usuario</span><br>
+            <span style="color: #9cdcfe;">"role"</span>: "Cajero",<br>
+            <span style="color: #9cdcfe;">"scope"</span>: "pagos.write", <span style="color: #6a9955;">// Permiso técnico</span><br>
+            <span style="color: #9cdcfe;">"office"</span>: "Sucursal_001", <span style="color: #6a9955;">// Claim de contexto</span><br>
+            <span style="color: #9cdcfe;">"exp"</span>: 1714000000 <span style="color: #6a9955;">// Expiración (máx 15 min)</span>
+        </div>
+        <div>}</div>
     </div>
-  </div>
 
-  <h3>Flujo JWT en APIs</h3>
+    <h3>Implementación de Políticas en .NET 8</h3>
+    <p>No usamos "If roles == 'admin'". Usamos <strong>Políticas de Seguridad</strong> descriptivas que separan la intención de la implementación.</p>
 
-  <div class="diagram">
-    <div class="diagram-title">Flujo de Autenticación con JWT</div>
-    <pre class="ascii">
- Cliente/App         Identity Provider        API IBS
-     │                      │                   │
-     │── Login (usr/pwd) ──►│                   │
-     │                      │ valida credencial  │
-     │◄── JWT Token ────────│                   │
-     │   {                  │                   │
-     │    "sub": "user-123" │                   │
-     │    "roles": ["cajero"]│                  │
-     │    "exp": 1714000000 │                   │
-     │   }                  │                   │
-     │                      │                   │
-     │─── POST /transferencias ─────────────────►│
-     │    Authorization: Bearer {JWT}            │
-     │                                           │ valida firma JWT
-     │                                           │ verifica roles
-     │◄────────────────────── 200 OK ────────────│
-</pre>
-  </div>
+    <div class="card">
+        <pre style="background:transparent; padding:0; font-size:13px;"><code><span style="color: #6a9955;">// 1. Definir requerimientos complejos</span>
+builder.Services.AddAuthorization(options => {
+    options.AddPolicy(<span style="color: #ce9178;">"DobleFactorRequerido"</span>, policy => 
+        policy.RequireClaim(<span style="color: #ce9178;">"amr"</span>, <span style="color: #ce9178;">"mfa"</span>)); <span style="color: #6a9955;">// Solo si pasó 2FA</span>
 
-  <h3>Implementación en .NET</h3>
-  <pre data-lang="C# — JWT + RBAC"><code><span class="c">// Registrar autenticación JWT en Program.cs</span>
-builder.Services.<span class="m">AddAuthentication</span>(<span class="t">JwtBearerDefaults</span>.AuthenticationScheme)
-    .<span class="m">AddJwtBearer</span>(options =>
-    {
-        options.Authority = <span class="s">"https://identity.ibs.bank"</span>;
-        options.Audience = <span class="s">"ibs-api"</span>;
-    });
-
-builder.Services.<span class="m">AddAuthorization</span>(options =>
-{
-    <span class="c">// Políticas basadas en roles — segregación de funciones</span>
-    options.<span class="m">AddPolicy</span>(<span class="s">"PuedeProcesarPagos"</span>, p =>
-        p.<span class="m">RequireRole</span>(<span class="s">"cajero"</span>, <span class="s">"supervisor"</span>));
-
-    options.<span class="m">AddPolicy</span>(<span class="s">"PuedeAprobarCreditos"</span>, p =>
-        p.<span class="m">RequireRole</span>(<span class="s">"analista-creditos"</span>, <span class="s">"gerente"</span>));
-
-    options.<span class="m">AddPolicy</span>(<span class="s">"SoloLectura"</span>, p =>
-        p.<span class="m">RequireRole</span>(<span class="s">"auditor"</span>, <span class="s">"consulta"</span>));
+    options.AddPolicy(<span style="color: #ce9178;">"SoloHorarioBancario"</span>, policy =>
+        policy.AddRequirements(<span style="color: #569cd6;">new</span> BusinessHoursRequirement()));
 });
 
-<span class="c">// Proteger endpoints</span>
-[<span class="t">Authorize</span>(Policy = <span class="s">"PuedeProcesarPagos"</span>)]
-[<span class="t">HttpPost</span>(<span class="s">"transferencias"</span>)]
-<span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">IActionResult</span>&gt; <span class="m">Transfer</span>(<span class="t">TransferirRequest</span> req)
-{ ... }
-</code></pre>
+<span style="color: #6a9955;">// 2. Aplicar de forma limpia</span>
+[Authorize(Policy = <span style="color: #ce9178;">"DobleFactorRequerido"</span>)]
+<span style="color: #569cd6;">public async Task</span>&lt;IActionResult&gt; AprobarPrestamo(...) { ... }</code></pre>
+    </div>
 
-  <h3>Principios de Seguridad por Diseño (Blueprint IBS)</h3>
-  <div class="card-grid cols-2">
+    <h3>Seguridad de Datos y Auditoría (Regulación Bancaria)</h3>
+    <p>Para un banco, el "quién hizo qué" es una prueba legal. Implementamos auditoría automática a nivel de infraestructura.</p>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Amenaza</th>
+                    <th>Mitigación IBS</th>
+                    <th>Implementación</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Fraude Interno</strong></td>
+                    <td>Segregación de Funciones (SoD)</td>
+                    <td>Dos usuarios distintos para "Crear" y "Autorizar".</td>
+                </tr>
+                <tr>
+                    <td><strong>Inyección SQL</strong></td>
+                    <td>ORM / Parametrización</td>
+                    <td>Uso mandatorio de EF Core (nunca concatenar strings).</td>
+                </tr>
+                <tr>
+                    <td><strong>Fuga de Datos</strong></td>
+                    <td>Enmascaramiento (Masking)</td>
+                    <td>Los logs nunca muestran el PAN de la tarjeta.</td>
+                </tr>
+                <tr>
+                    <td><strong>Suplantación</strong></td>
+                    <td>Tokens de corta duración</td>
+                    <td>JWTs expiran en 15 minutos + Refresh Tokens.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout warn">
+        <div class="callout-icon">🚨</div>
+        <div class="callout-text">
+            <strong>Principio de Menor Privilegio:</strong> Un desarrollador o un módulo debe tener solo los permisos mínimos necesarios para su función. Si el módulo de <em>Notificaciones</em> no necesita ver el saldo de la cuenta, el servicio de datos no debe exponérselo.
+        </div>
+    </div>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Audit Log Inmutable:</strong> En IBS, los logs de auditoría se escriben en un almacenamiento que no permite borrar (WORM - Write Once Read Many). Esto garantiza que ni un administrador de base de datos pueda borrar las huellas de una operación fraudulenta.
+        </div>
+    </div>
+
     <div class="card accent-orange">
-      <h4>🔍 Auditoría Inmutable</h4>
-      <p>Toda operación sensible se registra en una tabla append-only. Nadie puede modificar el historial de operaciones. Requerimiento regulatorio bancario.</p>
+        <h4>Resumen Final de Seguridad:</h4>
+        <p style="font-size: 14px;">La seguridad no es un obstáculo para el desarrollo, es la base de nuestro negocio. En el nuevo IBS, cada línea de código debe escribirse pensando: <strong>"¿Qué pasa si un atacante controla los parámetros de esta función?"</strong>. Validar, Autenticar y Auditar son nuestras tres reglas de oro.</p>
     </div>
-    <div class="card accent-green">
-      <h4>🔒 Segregación de Funciones</h4>
-      <p>Quien aprueba no es quien ejecuta. Quien puede ver datos de clientes no puede procesar pagos. Previene fraude interno.</p>
-    </div>
-    <div class="card accent-pink">
-      <h4>🛡️ DLP (Data Loss Prevention)</h4>
-      <p>Datos sensibles (PII, números de cuenta) se tokenizan o cifran. Nadie accede al dato real salvo el módulo que lo gestiona.</p>
-    </div>
-    <div class="card accent-blue">
-      <h4>🌐 Zero Trust en APIs</h4>
-      <p>Toda llamada entre módulos debe autenticarse, incluso si vienen de dentro del mismo proceso. Un módulo comprometido no compromete a otros.</p>
-    </div>
-  </div>
 </section>
