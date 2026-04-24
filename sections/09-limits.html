@@ -1,59 +1,109 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 9. LÍMITES DE MÓDULOS -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="limits">
   <span class="section-number">// 09</span>
-  <h2 class="section-title">Límites entre Módulos — Bounded Contexts</h2>
-  <p class="section-subtitle">La decisión más difícil y más importante del diseño</p>
+  <h2 class="section-title">Límites entre Módulos</h2>
+  <p class="section-subtitle">El concepto de Bounded Context: Donde las palabras cobran un único sentido.</p>
 
-  <p>Un <strong>Bounded Context</strong> (DDD) es el límite conceptual dentro del cual un modelo de dominio es consistente. Es la guía para decidir qué va en qué módulo.</p>
+  <p>La mayor causa de fracaso en la modernización de software no es el lenguaje de programación, sino los <strong>límites difusos</strong>. En DDD, un <strong>Bounded Context</strong> es una frontera lógica donde un modelo de datos es consistente y las palabras no tienen ambigüedad.</p>
+
+  
+
+  <h3>El Problema de la Ambigüedad: ¿Qué es un "Cliente"?</h3>
+  <p>En el IBS legado, una tabla <code>CLIENTE</code> tiene 200 columnas porque intenta satisfacer a todos. En el Monolito Modular, el significado cambia según el contexto:</p>
+
+  <div class="card-grid cols-3">
+    <div class="card accent-blue">
+      <h4>Módulo Clientes</h4>
+      <p>Es un <strong>Sujeto</strong> con nombre, dirección y validación biométrica (KYC).</p>
+    </div>
+    <div class="card accent-green">
+      <h4>Módulo Créditos</h4>
+      <p>Es un <strong>Deudor</strong> con capacidad de pago y score crediticio.</p>
+    </div>
+    <div class="card accent-purple">
+      <h4>Módulo Contabilidad</h4>
+      <p>Es una <strong>Contraparte</strong> vinculada a un asiento contable.</p>
+    </div>
+  </div>
+
+  <h3>Estrategias para definir límites profesionales</h3>
+
+  <div class="card-grid cols-2">
+    <div class="card">
+      <h4>1. Autonomía de Datos (Schema Isolation)</h4>
+      <p>Cada módulo es dueño de sus tablas. Si el módulo de <em>Pagos</em> necesita el nombre del cliente, <strong>no hace un JOIN</strong>. O lo pide por servicio, o guarda una copia mínima (proyección) de lo que necesita.</p>
+    </div>
+    <div class="card">
+      <h4>2. Context Mapping</h4>
+      <p>Es el mapa de cómo se hablan los módulos. Definimos quién es el "Upstream" (el que manda el dato) y quién es el "Downstream" (el que lo recibe).</p>
+    </div>
+  </div>
+
+  <h3>Matriz de Responsabilidades IBS 2026</h3>
+  <p>Para evitar solapamientos, hemos definido los límites de los módulos core basándonos en su comportamiento:</p>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Módulo</th>
+          <th>Responsabilidad Primaria</th>
+          <th>"Verbo" Principal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Clientes</strong></td>
+          <td>Identidad y cumplimiento legal (KYC).</td>
+          <td><em>Identificar</em></td>
+        </tr>
+        <tr>
+          <td><strong>Cuentas</strong></td>
+          <td>Gestión de saldos y disponibilidad de fondos.</td>
+          <td><em>Contener</em></td>
+        </tr>
+        <tr>
+          <td><strong>Pagos</strong></td>
+          <td>Movimiento de dinero entre cuentas o bancos.</td>
+          <td><em>Transferir</em></td>
+        </tr>
+        <tr>
+          <td><strong>Créditos</strong></td>
+          <td>Ciclo de vida del préstamo y cobranza.</td>
+          <td><em>Prestar</em></td>
+        </tr>
+        <tr>
+          <td><strong>Contabilidad</strong></td>
+          <td>Registro de la verdad financiera (Libro Mayor).</td>
+          <td><em>Registrar</em></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <div class="callout warn">
     <div class="callout-icon">⚠️</div>
     <div class="callout-text">
-      <strong>El mayor desafío del Monolito Modular (Blueprint IBS):</strong> Los límites mal definidos crean acoplamiento oculto que es peor que el original. Una vez que los módulos están en producción, cambiar sus límites es muy costoso.
+      <strong>Regla de Oro contra el Acoplamiento:</strong> Si para hacer un cambio en <em>Préstamos</em> tienes que modificar el código de <em>Contabilidad</em>, tus límites están mal. La comunicación debe ser mediante <strong>Eventos</strong>: Préstamo dice "Me desembolsé", y Contabilidad reacciona creando el asiento.
     </div>
   </div>
 
-  <h3>Cómo definir los límites (criterios)</h3>
+  <h3>Ejemplo Práctico: Comunicación entre Contextos</h3>
+  <p>¿Cómo sabe el módulo de Pagos que el cliente está habilitado sin entrar a la base de datos de Clientes?</p>
 
-  <div class="card-grid cols-2">
-    <div class="card accent-blue">
-      <h4>1. Ubiquitous Language</h4>
-      <p>El término "Cuenta" tiene distinto significado en Contabilidad (cuenta contable) y en Productos (cuenta bancaria del cliente). Si el lenguaje diverge → distinto bounded context.</p>
-    </div>
-    <div class="card accent-green">
-      <h4>2. Cohesión Funcional</h4>
-      <p>¿Qué cosas cambian juntas? Si agregar un nuevo producto bancario requiere cambiar 5 módulos distintos, los límites están mal trazados.</p>
-    </div>
-    <div class="card accent-orange">
-      <h4>3. Ownership de Datos</h4>
-      <p>Cada tabla/entidad tiene un único dueño. Si dos módulos escriben en la misma tabla → hay un problema de límites.</p>
-    </div>
-    <div class="card accent-purple">
-      <h4>4. Equipos Autónomos</h4>
-      <p>Un módulo debe poder ser desarrollado por un equipo sin coordinar constantemente con otros. Si hay coordinación permanente → los límites están mal.</p>
-    </div>
+  <div class="card accent-blue" style="font-family: 'Fira Code', monospace; font-size: 13px;">
+    <ol>
+      <li>1. El usuario solicita un Pago.</li>
+      <li>2. <strong>Módulo Pagos</strong> llama a la <code>IInternalClientService.GetStatus(id)</code>.</li>
+      <li>3. Esta interfaz está en un proyecto compartido, pero la implementación vive en el <strong>Módulo Clientes</strong>.</li>
+      <li>4. El <strong>Módulo Clientes</strong> responde "Habilitado".</li>
+      <li>5. <strong>Módulo Pagos</strong> procesa. <em>(Ninguna tabla fue compartida en el proceso)</em>.</li>
+    </ol>
   </div>
 
-  <h3>Módulos del Nuevo IBS y sus responsabilidades</h3>
-  <div class="table-wrap">
-    <table>
-      <tr><th>Módulo</th><th>Responsabilidades</th><th>Datos propios</th></tr>
-      <tr><td><strong>Clientes</strong></td><td>KYC, perfil, AML, onboarding</td><td>cliente, documento, dirección</td></tr>
-      <tr><td><strong>Cuentas Corrientes</strong></td><td>Apertura, movimientos, saldos</td><td>cuenta, movimiento, saldo</td></tr>
-      <tr><td><strong>Pagos</strong></td><td>Transferencias, débitos, créditos</td><td>orden_pago, estado_pago</td></tr>
-      <tr><td><strong>Créditos</strong></td><td>Originación, desembolso, mora</td><td>prestamo, cuota, garantía</td></tr>
-      <tr><td><strong>Contabilidad</strong></td><td>GL, asientos, conciliación</td><td>cuenta_contable, asiento, periodo</td></tr>
-      <tr><td><strong>Seguridad</strong></td><td>Authn, Authz, segregación roles</td><td>usuario, rol, permiso, sesión</td></tr>
-    </table>
-  </div>
-
-  <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+  <div class="callout tip">
+    <div class="callout-icon">💡</div>
     <div class="callout-text">
-      <strong>Regla de Oro:</strong> Ningún módulo accede directamente a tablas de otro módulo. Si el módulo Pagos necesita datos del cliente, consulta a través de la interfaz del módulo Clientes o replica los datos necesarios en su propio schema.
+      <strong>Lección para el equipo:</strong> Los buenos límites hacen que el sistema sea fácil de entender. Si un módulo hace "un poco de todo", pronto será tan difícil de mantener como el IBS actual. <strong>Respetar el Bounded Context es proteger tu salud mental como desarrollador.</strong>
     </div>
   </div>
 </section>
