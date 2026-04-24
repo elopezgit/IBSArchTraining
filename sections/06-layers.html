@@ -1,79 +1,98 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 6. CAPAS Y ENCAPSULAMIENTO -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="layers">
-  <span class="section-number">// 06</span>
-  <h2 class="section-title">Capas y Encapsulamiento</h2>
-  <p class="section-subtitle">Organización interna de cada módulo</p>
+    <span class="section-number">// 06</span>
+    <h2 class="section-title">Capas y Encapsulamiento</h2>
+    <p class="section-subtitle">Blindando la lógica de negocio contra los cambios tecnológicos.</p>
 
-  <h3>Arquitectura Interna de un Módulo</h3>
-  <p>Dentro de cada módulo, se aplica la <strong>Arquitectura Hexagonal</strong> (o Clean Architecture). El núcleo del dominio no conoce los detalles de infraestructura.</p>
+    <h3>La Arquitectura "Cebolla" (Onion Architecture)</h3>
+    <p>En el proyecto IBS, aplicamos una variante de <strong>Arquitectura Hexagonal</strong>. El principio fundamental es que la lógica de negocio (el Dominio) debe estar en el centro, aislada de las preocupaciones tecnológicas como bases de datos SQL o protocolos HTTP.</p>
 
-  <div class="layers">
-    <div class="layer" style="background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.3);">
-      <span>🖥️ Capa de Presentación / API</span>
-      <span>Controllers · BFF · DTOs de entrada</span>
+    
+
+    <div class="layers">
+        <div class="layer" style="background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.3);">
+            <span>🖥️ Capa de Presentación (Entry Points)</span>
+            <span style="font-size: 13px;">Web APIs, Controllers, SignalR Hubs, o CLI. Solo se encarga de recibir peticiones y devolver respuestas.</span>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ invoca a ▼</div>
+        <div class="layer" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);">
+            <span>⚙️ Capa de Aplicación (Orquestación)</span>
+            <span style="font-size: 13px;">Use Cases (MediatR), Application Services. Orquesta la danza entre entidades y servicios externos.</span>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ depende de ▼</div>
+        <div class="layer" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);">
+            <span>💎 Capa de Dominio (El Corazón)</span>
+            <span style="font-size: 13px;">Entities, Value Objects, Aggregates. Aquí vive el <strong>saber bancario</strong> (ej: cómo se calcula un interés).</span>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▲ implementa interfaces de ▲</div>
+        <div class="layer" style="background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);">
+            <span>🗄️ Capa de Infraestructura (Detalles)</span>
+            <span style="font-size: 13px;">EF Core Repositories, Redis Cache, Clientes de API externa. Es lo que permite que el sistema "respire".</span>
+        </div>
     </div>
-    <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ depende de ▼</div>
-    <div class="layer" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);">
-      <span>⚙️ Capa de Aplicación</span>
-      <span>Use Cases · Application Services · DTOs</span>
+
+    <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-text">
+            <strong>La Regla de Oro:</strong> Las dependencias siempre apuntan hacia adentro. El <strong>Dominio no depende de nada</strong>. La Infraestructura depende del Dominio. Si el Dominio necesita guardar un dato, define una <code>interface</code> y la Infraestructura la implementa.
+        </div>
     </div>
-    <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ depende de ▼</div>
-    <div class="layer" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);">
-      <span>💎 Capa de Dominio (núcleo)</span>
-      <span>Entities · Aggregates · Domain Services · Events</span>
+
+    <h3>Ejemplo Real: Módulo de Pagos</h3>
+    <p>Observa cómo la lógica de validación de saldo es pura y no tiene referencias a bases de datos ni frameworks.</p>
+
+    <div class="card-grid cols-2">
+        <div class="card">
+            <h4>1. Dominio (Puro C#)</h4>
+            <pre style="background:none; border:none; padding:0; font-size: 12px;"><code>public class Transferencia {
+  // Regla de Negocio: No se transfiere si no hay saldo
+  public Result Procesar(Cuenta origen, Cuenta destino) {
+    if (!origen.TieneSaldo(Monto)) 
+        return Result.Fail("Saldo insuficiente");
+    
+    origen.Debitar(Monto);
+    destino.Acreditar(Monto);
+    return Result.Success();
+  }
+}</code></pre>
+        </div>
+        <div class="card accent-blue">
+            <h4>2. Aplicación (Orquestador)</h4>
+            <pre style="background:none; border:none; padding:0; font-size: 12px;"><code>public class TransferirHandler {
+  private readonly ICuentaRepo _repo; // DIP en acción
+
+  public async Task Handle(TransferirCmd cmd) {
+    var origen = await _repo.GetById(cmd.From);
+    var destino = await _repo.GetById(cmd.To);
+    
+    var txn = new Transferencia(cmd.Monto);
+    var res = txn.Procesar(origen, destino);
+
+    if(res.Ok) await _repo.UnitOfWork.Save();
+  }
+}</code></pre>
+        </div>
     </div>
-    <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ define interfaces, implementadas en ▼</div>
-    <div class="layer" style="background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);">
-      <span>🗄️ Capa de Infraestructura</span>
-      <span>Repositorios · ORM · Mensajería · APIs externas</span>
+
+    <h3>Beneficios para IBS 2026</h3>
+    <div class="card-grid cols-3">
+        <div class="card">
+            <h4>🧩 Intercambiabilidad</h4>
+            <p>Podemos cambiar Sybase por SQL Server o PostgreSQL mañana mismo, y el 100% de la lógica de Dominio quedará intacta.</p>
+        </div>
+        <div class="card">
+            <h4>🧪 Testability Total</h4>
+            <p>Podemos testear las reglas de negocio en milisegundos sin necesidad de levantar una base de datos o un servidor web.</p>
+        </div>
+        <div class="card">
+            <h4>🛡️ Seguridad de Código</h4>
+            <p>Evitamos que un desarrollador "accidentalmente" escriba lógica de negocio en un Stored Procedure o en un Controller.</p>
+        </div>
     </div>
-  </div>
 
-  <div class="callout tip">
-    <div class="callout-icon">💡</div>
-    <div class="callout-text">
-      <strong>Regla de Dependencia:</strong> Las capas internas nunca conocen a las externas. El Dominio NO importa de Infraestructura. Si necesitas la BD desde el Dominio, defines una interfaz (IAccountRepository) y la Infraestructura la implementa. Esto se logra con <strong>Inyección de Dependencias</strong>.
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Arquitecto Senior dice:</strong> "La infraestructura es un detalle". Tu código debe ser capaz de explicar qué hace el banco (negocio) sin que yo tenga que saber qué base de datos usas.
+        </div>
     </div>
-  </div>
-
-  <h3>Ejemplo en .NET para el módulo Pagos</h3>
-  <pre data-lang=".NET C#"><code><span class="c">// DOMINIO — No sabe nada de EF, SQL ni infraestructura</span>
-<span class="k">public class</span> <span class="t">Transferencia</span>
-{
-    <span class="k">public</span> <span class="t">TransferenciaId</span> Id { <span class="k">get</span>; <span class="k">private set</span>; }
-    <span class="k">public</span> <span class="t">Money</span> Monto { <span class="k">get</span>; <span class="k">private set</span>; }
-    <span class="k">public</span> <span class="t">CuentaId</span> CuentaOrigen { <span class="k">get</span>; <span class="k">private set</span>; }
-
-    <span class="k">public</span> <span class="t">Result</span> <span class="m">Ejecutar</span>(<span class="t">Cuenta</span> origen, <span class="t">Cuenta</span> destino)
-    {
-        <span class="k">if</span> (origen.Saldo < Monto)
-            <span class="k">return</span> <span class="t">Result</span>.<span class="m">Failure</span>(<span class="s">"Saldo insuficiente"</span>);
-        origen.<span class="m">Debitar</span>(Monto);
-        destino.<span class="m">Acreditar</span>(Monto);
-        <span class="m">AddDomainEvent</span>(<span class="k">new</span> <span class="t">TransferenciaEjecutadaEvent</span>(Id));
-        <span class="k">return</span> <span class="t">Result</span>.<span class="m">Success</span>();
-    }
-}
-
-<span class="c">// APLICACIÓN — Orquesta el flujo</span>
-<span class="k">public class</span> <span class="t">EjecutarTransferenciaUseCase</span>
-{
-    <span class="k">private readonly</span> <span class="t">ICuentaRepository</span> _cuentas;  <span class="c">// interfaz, no implementación</span>
-    <span class="k">private readonly</span> <span class="t">IEventPublisher</span> _events;
-
-    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">Result</span>&gt; <span class="m">Execute</span>(<span class="t">TransferirDto</span> cmd)
-    {
-        <span class="k">var</span> origen = <span class="k">await</span> _cuentas.<span class="m">GetById</span>(cmd.CuentaOrigenId);
-        <span class="k">var</span> destino = <span class="k">await</span> _cuentas.<span class="m">GetById</span>(cmd.CuentaDestinoId);
-        <span class="k">var</span> transferencia = <span class="k">new</span> <span class="t">Transferencia</span>(cmd.Monto);
-        <span class="k">var</span> result = transferencia.<span class="m">Ejecutar</span>(origen, destino);
-        <span class="k">if</span> (result.<span class="m">IsSuccess</span>())
-            <span class="k">await</span> _cuentas.<span class="m">Save</span>(origen, destino, transferencia);
-        <span class="k">return</span> result;
-    }
-}
-</code></pre>
 </section>
