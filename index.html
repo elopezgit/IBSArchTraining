@@ -1695,6 +1695,15 @@ builder.Services.<span class="m">AddAuthorization</span>(options =>
 
 </main>
 
+<div id="glossary-modal" class="modal-overlay">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <h3 id="modal-term">Término</h3>
+    <div id="modal-definition">Definición...</div>
+  </div>
+</div>
+
+
 <script>
   // Active nav tracking
   const sections = document.querySelectorAll('section[id]');
@@ -1710,5 +1719,10 @@ builder.Services.<span class="m">AddAuthorization</span>(options =>
   }, { rootMargin: '-20% 0px -70% 0px' });
   sections.forEach(s => observer.observe(s));
 </script>
+
+
+
+<script src="js/glossary-tool.js"></script>
+
 </body>
 </html>
