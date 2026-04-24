@@ -1,57 +1,98 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 7. INYECCIÓN DE DEPENDENCIAS -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="di">
-  <span class="section-number">// 07</span>
-  <h2 class="section-title">Inyección de Dependencias</h2>
-  <p class="section-subtitle">El mecanismo que hace posible el bajo acoplamiento</p>
+    <span class="section-number">// 07</span>
+    <h2 class="section-title">Inyección de Dependencias (DI)</h2>
+    <p class="section-subtitle">El arte de no fabricar tus propias herramientas.</p>
 
-  <p>La Inyección de Dependencias (DI) es el patrón que permite que las clases reciban sus dependencias desde afuera en lugar de crearlas internamente. Es el mecanismo central del Principio de Inversión de Dependencias (la "D" de SOLID).</p>
+    <p>Para entender la DI, usemos una analogía: Si eres un electricista (una clase de negocio), tú no fabricas tu propio destornillador (dependencia). Tú esperas que el destornillador esté en tu caja de herramientas cuando llegas a la obra. <strong>La DI es quien te entrega la herramienta.</strong></p>
 
-  <h3>Problema sin DI (acoplamiento duro)</h3>
-  <pre data-lang="C# (sin DI)"><code><span class="k">public class</span> <span class="t">PagoService</span>
-{
-    <span class="c">// ❌ PagoService crea sus dependencias — acoplamiento duro</span>
-    <span class="k">private readonly</span> <span class="t">SqlCuentaRepository</span> _repo = <span class="k">new</span> <span class="t">SqlCuentaRepository</span>();
+    <h3>¿Qué problema resolvemos?</h3>
+    <p>El mayor enemigo de un sistema bancario que debe durar 20 años es el <strong>Acoplamiento Rígido</strong>. Si una clase crea a otra usando <code>new()</code>, queda "pegada" a ella para siempre.</p>
 
-    <span class="c">// No podemos testear sin BD real</span>
-    <span class="c">// No podemos cambiar la implementación sin tocar PagoService</span>
-}</code></pre>
-
-  <h3>Solución con DI (inversión de dependencias)</h3>
-  <pre data-lang="C# (con DI)"><code><span class="c">// 1. Definir la abstracción (en capa de Dominio)</span>
-<span class="k">public interface</span> <span class="t">ICuentaRepository</span>
-{
-    <span class="t">Task</span>&lt;<span class="t">Cuenta</span>&gt; <span class="m">GetById</span>(<span class="t">CuentaId</span> id);
-    <span class="t">Task</span> <span class="m">Save</span>(<span class="t">Cuenta</span> cuenta);
-}
-
-<span class="c">// 2. Implementación en Infraestructura</span>
-<span class="k">public class</span> <span class="t">EfCuentaRepository</span> : <span class="t">ICuentaRepository</span>
-{
-    <span class="k">private readonly</span> <span class="t">IbsDbContext</span> _db;
-    <span class="k">public</span> <span class="t">EfCuentaRepository</span>(<span class="t">IbsDbContext</span> db) => _db = db;
-    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">Cuenta</span>&gt; <span class="m">GetById</span>(<span class="t">CuentaId</span> id)
-        => <span class="k">await</span> _db.Cuentas.<span class="m">FindAsync</span>(id.Value);
-}
-
-<span class="c">// 3. PagoService recibe la abstracción — no sabe qué implementación</span>
-<span class="k">public class</span> <span class="t">PagoService</span>
-{
-    <span class="k">private readonly</span> <span class="t">ICuentaRepository</span> _repo;  <span class="c">// ✅ interfaz</span>
-    <span class="k">public</span> <span class="t">PagoService</span>(<span class="t">ICuentaRepository</span> repo) => _repo = repo;
-}
-
-<span class="c">// 4. Registrar en el contenedor DI (Program.cs)</span>
-builder.Services.<span class="m">AddScoped</span>&lt;<span class="t">ICuentaRepository</span>, <span class="t">EfCuentaRepository</span>&gt;();
-<span class="c">// Para tests: AddScoped&lt;ICuentaRepository, InMemoryCuentaRepository&gt;()</span>
-</code></pre>
-
-  <div class="callout tip">
-    <div class="callout-icon">💡</div>
-    <div class="callout-text">
-      <strong>Beneficio clave para IBS:</strong> La migración de stored procedures a .NET se hace módulo por módulo. Con DI, el módulo "Pagos" puede tener una implementación temporal que llama al SP (SqlPaymentRepository) y luego reemplazarla por la implementación .NET pura (EfPaymentRepository), sin tocar el código de dominio ni aplicación.
+    <div class="card-grid cols-2">
+        <div class="card" style="border-color: #f87171;">
+            <h4>❌ Sin DI (Control Centralizado)</h4>
+            <p>La clase decide <strong>qué</strong> herramienta usar y <strong>cómo</strong> crearla.</p>
+            <ul style="font-size: 13px;">
+                <li>No se puede testear sin la base de datos real.</li>
+                <li>Si cambias SQL por Oracle, rompes 50 clases.</li>
+                <li>Código "frágil" y difícil de leer.</li>
+            </ul>
+        </div>
+        <div class="card accent-green">
+            <h4>✅ Con DI (Inversión de Control)</h4>
+            <p>La clase solo pide <strong>qué necesita</strong> (interfaz), no le importa quién se lo da.</p>
+            <ul style="font-size: 13px;">
+                <li>Testeo simple usando "Mocks" (herramientas de juguete).</li>
+                <li>Cambios tecnológicos transparentes.</li>
+                <li>Cumplimos el principio <strong>SOLID</strong> de Inversión de Dependencias.</li>
+            </ul>
+        </div>
     </div>
-  </div>
+
+    
+
+    <h3>Implementación Profesional en IBS</h3>
+    <p>En .NET 8, el contenedor de dependencias es el motor del sistema. Sigue este flujo de 3 pasos:</p>
+
+    <div class="card accent-blue">
+        <h4>1. La Abstracción (El Contrato)</h4>
+        <pre style="background:transparent; padding:0; font-size:13px;"><code>public interface IRepositorioCuentas {
+    Task&lt;Cuenta&gt; ObtenerPorId(int id);
+}</code></pre>
+        <p style="font-size: 12px; margin-top:5px;"><em>Ubicación: Capa de Dominio. No sabe nada de SQL.</em></p>
+    </div>
+
+    <div class="card accent-blue" style="margin-top:15px;">
+        <h4>2. El Servicio (El Consumidor)</h4>
+        <pre style="background:transparent; padding:0; font-size:13px;"><code>public class ProcesadorPagos(IRepositorioCuentas repo) {
+    // Usamos el "Primary Constructor" de C# 12
+    public async Task Procesar(int id) {
+        var cuenta = await repo.ObtenerPorId(id);
+    }
+}</code></pre>
+    </div>
+
+    <h3>Ciclos de Vida (Lifetimes) en .NET</h3>
+    <p>Es fundamental entender cuánto tiempo vive un objeto inyectado para evitar errores de memoria o datos corruptos:</p>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Lifetime</th>
+                    <th>Comportamiento</th>
+                    <th>Uso común en IBS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Transient</strong></td>
+                    <td>Se crea una instancia <strong>cada vez</strong> que se pide.</td>
+                    <td>Servicios ligeros sin estado.</td>
+                </tr>
+                <tr>
+                    <td><strong>Scoped</strong></td>
+                    <td>Se crea una instancia <strong>por cada petición HTTP</strong>.</td>
+                    <td>Contextos de Base de Datos (DbContext) y Repositorios.</td>
+                </tr>
+                <tr>
+                    <td><strong>Singleton</strong></td>
+                    <td>Se crea <strong>una sola vez</strong> y vive siempre.</td>
+                    <td>Cachés compartidas, configuración de sistema.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Estrategia de Migración:</strong> Gracias a la DI, podemos implementar una interfaz llamada <code>IServicioContable</code> que por debajo llame a un <strong>Stored Procedure</strong> de Sybase hoy, y mañana, simplemente cambiando una línea en <code>Program.cs</code>, que llame a un nuevo servicio en <strong>C#/.NET</strong>. El resto del sistema ni se enterará del cambio.
+        </div>
+    </div>
+
+    <div class="card accent-purple">
+        <h4>Resumen para el equipo:</h4>
+        <p style="font-size: 14px;"><strong>No uses <code>new</code></strong> para clases que tengan lógica de negocio o acceso a datos. Pídelas en el constructor. Deja que el contenedor de .NET haga el trabajo sucio por ti.</p>
+    </div>
 </section>
