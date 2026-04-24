@@ -1,0 +1,100 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 5. MONOLITO MODULAR -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="modular">
+  <span class="section-number">// 05</span>
+  <h2 class="section-title">Características del Monolito Modular</h2>
+  <p class="section-subtitle">El estilo arquitectónico elegido para el nuevo IBS</p>
+
+  <h3>Definición</h3>
+  <p>Un sistema que se <strong>despliega como una unidad única</strong> pero cuyo código se organiza en <strong>módulos con límites claros</strong>, reglas de dependencia explícitas y ownership definido.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Estructura del Nuevo IBS — Monolito Modular</div>
+    <pre class="ascii">
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+         MONOLITO MODULAR — Nuevo IBS (.NET)
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │           CORE DE IBS                           │   │
+│  │  ┌──────────┐ ┌────────┐ ┌──────┐ ┌──────────┐ │   │
+│  │  │Contabilid│ │Clientes│ │Segur.│ │Cálculo/  │ │   │
+│  │  │          │ │        │ │      │ │Config    │ │   │
+│  │  └────▲─────┘ └───▲────┘ └──▲───┘ └────▲─────┘ │   │
+│  └────────┼───────────┼─────────┼──────────┼───────┘   │
+│           │           │         │          │            │
+│  ┌────────▼───────────▼─────────▼──────────▼───────┐   │
+│  │           INTEGRACIONES INTERNAS                │   │
+│  │  [Gestor Eventos]  [Servicios Módulos]  [API GW] │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                         │
+│  ┌──────────────────┐    ┌──────────────────────────┐   │
+│  │    PRODUCTOS     │    │    ANALÍTICA DE DATOS    │   │
+│  │ [CA][CC][Créd.]  │    │  [Data Lake] [Report+IA] │   │
+│  └──────────────────┘    └──────────────────────────┘   │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  MÓDULOS TRANSVERSALES: Observabilidad · Auditoría│   │
+│  └──────────────────────────────────────────────────┘   │
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+         Un solo proceso · Módulos aislados
+</pre>
+  </div>
+
+  <h3>Principios Clave</h3>
+  <div class="card-grid cols-2">
+    <div class="card accent-blue">
+      <h4>📦 Alta Cohesión</h4>
+      <p>Todo lo relacionado con un dominio (Pagos, Clientes, Créditos) vive en el mismo módulo. Los cambios de negocio son locales.</p>
+    </div>
+    <div class="card accent-green">
+      <h4>🔗 Bajo Acoplamiento</h4>
+      <p>Los módulos se comunican solo a través de interfaces (fachadas) bien definidas. Nunca acceden directamente a tablas de otro módulo.</p>
+    </div>
+    <div class="card accent-orange">
+      <h4>🚪 Encapsulamiento Fuerte</h4>
+      <p>Nada accede al interior de un módulo sino a través de sus contratos. La BD de cada módulo es privada.</p>
+    </div>
+    <div class="card accent-purple">
+      <h4>🌱 Evolución Controlada</h4>
+      <p>Los módulos pueden extraerse como microservicios en el futuro si hay necesidad de escalar. El diseño lo permite sin big-bang.</p>
+    </div>
+  </div>
+
+  <h3>Patrones de Organización del Código</h3>
+  <p>Existen tres formas de organizar código. El Monolito Modular favorece la tercera:</p>
+
+  <div class="card-grid cols-3">
+    <div class="card">
+      <h4>🗂️ Por Capa (legacy)</h4>
+      <pre><code>src/
+  controllers/
+  services/
+  repositories/
+  models/</code></pre>
+      <p style="font-size:12px;margin-top:8px;color:#f87171;">❌ Dificulta el trabajo en features completas</p>
+    </div>
+    <div class="card">
+      <h4>🏷️ Por Feature</h4>
+      <pre><code>src/
+  customer/
+  payments/
+  accounts/
+  loans/</code></pre>
+      <p style="font-size:12px;margin-top:8px;color:#ffcb6b;">⚡ Mejor pero sin límites de dominio claros</p>
+    </div>
+    <div class="card accent-green">
+      <h4>🧩 Por Módulo/Componente</h4>
+      <pre><code>src/
+  modules/
+    payments/
+      domain/
+      app/
+      infra/
+    accounts/
+      ...</code></pre>
+      <p style="font-size:12px;margin-top:8px;color:#34d399;">✅ Límites explícitos, cada módulo independiente</p>
+    </div>
+  </div>
+</section>

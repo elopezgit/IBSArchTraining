@@ -1,0 +1,142 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 17. TESTING -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="testing">
+  <span class="section-number">// 17</span>
+  <h2 class="section-title">Testing</h2>
+  <p class="section-subtitle">Módulos, integraciones y eventos — la pirámide de testing para IBS</p>
+
+  <h3>Pirámide de Testing</h3>
+
+  <div class="layers" style="max-width:600px;">
+    <div class="layer" style="background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);justify-content:center;text-align:center;width:40%;margin:0 auto;">
+      <span style="font-size:12px;text-align:center;">🔚 E2E Tests<br><span style="opacity:.6">Pocos · Lentos · Costosos</span></span>
+    </div>
+    <div class="layer" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);justify-content:center;text-align:center;width:65%;margin:0 auto;">
+      <span style="font-size:12px;text-align:center;">🔗 Integration Tests<br><span style="opacity:.6">Módulo + BD + Eventos</span></span>
+    </div>
+    <div class="layer" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);justify-content:center;text-align:center;width:100%;">
+      <span style="font-size:12px;text-align:center;">🧪 Unit Tests<br><span style="opacity:.6">Muchos · Rápidos · Baratos · Dominio puro</span></span>
+    </div>
+  </div>
+
+  <h3>Unit Tests — Dominio puro</h3>
+  <p>Tests del dominio sin BD ni red. Prueban la lógica de negocio aislada.</p>
+  <pre data-lang="C# — Unit Test"><code><span class="k">public class</span> <span class="t">CuentaCorrienteTests</span>
+{
+    [<span class="t">Fact</span>]
+    <span class="k">public void</span> <span class="m">Debitar_SaldoInsuficiente_LanzaExcepcion</span>()
+    {
+        <span class="c">// Arrange</span>
+        <span class="k">var</span> cuenta = <span class="t">CuentaCorriente</span>.<span class="m">Create</span>(
+            titular: <span class="t">ClienteId</span>.<span class="m">New</span>(),
+            saldoInicial: <span class="k">new</span> <span class="t">Money</span>(<span class="v">100</span>, <span class="t">Currency</span>.ARS));
+
+        <span class="c">// Act &amp; Assert</span>
+        <span class="k">var</span> ex = <span class="m">Assert</span>.<span class="m">Throws</span>&lt;<span class="t">SaldoInsuficienteException</span>&gt;(
+            () => cuenta.<span class="m">Debitar</span>(<span class="k">new</span> <span class="t">Money</span>(<span class="v">200</span>, <span class="t">Currency</span>.ARS), <span class="s">"test"</span>));
+        <span class="m">Assert</span>.<span class="m">Equal</span>(cuenta.Id, ex.CuentaId);
+    }
+
+    [<span class="t">Fact</span>]
+    <span class="k">public void</span> <span class="m">Debitar_Exitoso_PublicaSaldoActualizadoEvent</span>()
+    {
+        <span class="k">var</span> cuenta = <span class="t">CuentaCorriente</span>.<span class="m">Create</span>(saldoInicial: <span class="k">new</span> <span class="t">Money</span>(<span class="v">500</span>, <span class="t">Currency</span>.ARS));
+        cuenta.<span class="m">Debitar</span>(<span class="k">new</span> <span class="t">Money</span>(<span class="v">100</span>, <span class="t">Currency</span>.ARS), <span class="s">"test"</span>);
+
+        <span class="m">Assert</span>.<span class="m">Contains</span>(cuenta.DomainEvents,
+            e => e <span class="k">is</span> <span class="t">SaldoActualizadoEvent</span>);
+    }
+}
+</code></pre>
+
+  <h3>Integration Tests — Módulo + BD</h3>
+  <p>Prueban que el módulo funciona end-to-end con su base de datos real (usando TestContainers o InMemory).</p>
+  <pre data-lang="C# — Integration Test"><code><span class="k">public class</span> <span class="t">PagosModuleIntegrationTests</span> : <span class="t">IClassFixture</span>&lt;<span class="t">PagosDbFixture</span>&gt;
+{
+    [<span class="t">Fact</span>]
+    <span class="k">public async</span> <span class="t">Task</span> <span class="m">EjecutarTransferencia_PagosYSaldosActualizados</span>()
+    {
+        <span class="c">// Arrange — usando BD real en Docker</span>
+        <span class="k">var</span> handler = _fixture.<span class="m">GetService</span>&lt;<span class="t">EjecutarTransferenciaHandler</span>&gt;();
+        <span class="k">var</span> cmd = <span class="k">new</span> <span class="t">TransferirCmd</span>(
+            CuentaOrigen: _fixture.CuentaOrigenId,
+            CuentaDestino: _fixture.CuentaDestinoId,
+            Monto: <span class="k">new</span> <span class="t">Money</span>(<span class="v">500</span>, <span class="t">Currency</span>.ARS));
+
+        <span class="c">// Act</span>
+        <span class="k">var</span> result = <span class="k">await</span> handler.<span class="m">Handle</span>(cmd);
+
+        <span class="c">// Assert</span>
+        <span class="m">Assert</span>.<span class="m">True</span>(result.IsSuccess);
+        <span class="k">var</span> origen = <span class="k">await</span> _fixture.<span class="m">GetCuenta</span>(_fixture.CuentaOrigenId);
+        <span class="m">Assert</span>.<span class="m">Equal</span>(<span class="v">500</span>, origen.Saldo.Amount); <span class="c">// era 1000, se debitaron 500</span>
+        <span class="c">// Verificar que se creó el mensaje en outbox</span>
+        <span class="k">var</span> outbox = <span class="k">await</span> _fixture.<span class="m">GetPendingOutbox</span>();
+        <span class="m">Assert</span>.<span class="m">Contains</span>(outbox, m => m.Type == <span class="s">"TransferenciaEjecutada"</span>);
+    }
+}
+</code></pre>
+
+  <h3>Testing de Eventos</h3>
+  <p>Verificar que los módulos reaccionan correctamente a los eventos que reciben.</p>
+  <pre data-lang="C# — Event Testing"><code><span class="k">public class</span> <span class="t">ContabilidadEventHandlerTests</span>
+{
+    [<span class="t">Fact</span>]
+    <span class="k">public async</span> <span class="t">Task</span> <span class="m">CuandoTransferenciaEjecutada_SeRegistranAsientos</span>()
+    {
+        <span class="c">// Arrange</span>
+        <span class="k">var</span> handler = <span class="k">new</span> <span class="t">RegistrarAsientosHandler</span>(_mockGlService);
+        <span class="k">var</span> evt = <span class="k">new</span> <span class="t">TransferenciaEjecutadaEvent</span>(
+            Id: <span class="t">TransferenciaId</span>.<span class="m">New</span>(),
+            Monto: <span class="k">new</span> <span class="t">Money</span>(<span class="v">1000</span>, <span class="t">Currency</span>.ARS),
+            Origen: _cuentaOrigenId,
+            Destino: _cuentaDestinoId);
+
+        <span class="c">// Act</span>
+        <span class="k">await</span> handler.<span class="m">Handle</span>(evt, <span class="t">CancellationToken</span>.None);
+
+        <span class="c">// Assert — se registraron dos asientos (débito + crédito)</span>
+        _mockGlService.<span class="m">Verify</span>(g => g.<span class="m">RegistrarAsientos</span>(
+            <span class="t">It</span>.<span class="m">Is</span>&lt;<span class="t">Asiento</span>&gt;(a => a.Tipo == <span class="t">TipoAsiento</span>.Debito),
+            <span class="t">It</span>.<span class="m">Is</span>&lt;<span class="t">Asiento</span>&gt;(a => a.Tipo == <span class="t">TipoAsiento</span>.Credito)),
+            <span class="t">Times</span>.<span class="m">Once</span>());
+    }
+}
+</code></pre>
+
+  <h3>Golden Tests — Reconciliación legado vs .NET</h3>
+  <p>Específicos para la migración IBS. Comparan el resultado del sistema nuevo con el legado para garantizar equivalencia funcional.</p>
+
+  <div class="callout ref">
+    <div class="callout-icon">📖</div>
+    <div class="callout-text">
+      <strong>Del plan de estimación IBS:</strong> Los Golden Tests son pruebas que comparan resultados del sistema modernizado contra el legado usando datos y salidas esperadas como referencia. Son el mecanismo principal de certificación durante la migración incremental.
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Estrategia de Golden Tests — Migración IBS</div>
+    <pre class="ascii">
+  Datos reales de Sybase
+         │
+         ├───────────────┐
+         │               │
+         ▼               ▼
+  Sistema Legado    Sistema .NET
+  (PowerBuilder)   (Nuevo IBS)
+         │               │
+         ▼               ▼
+    Resultado A      Resultado B
+         │               │
+         └───────┬────────┘
+                 │
+          COMPARAR A == B ?
+                 │
+       ✅ ok → Release aprobado
+       ❌ diff → Bug encontrado
+</pre>
+  </div>
+
+</section>

@@ -1,0 +1,91 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 2. ESTILOS ARQUITECTÓNICOS -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="styles">
+  <span class="section-number">// 02</span>
+  <h2 class="section-title">Estilos Arquitectónicos</h2>
+  <p class="section-subtitle">Monolito, Microservicios y Monolito Modular — por qué elegimos el tercero</p>
+
+  <h3>Monolito Tradicional</h3>
+  <p>Toda la aplicación como una sola unidad desplegable, con código fuertemente acoplado. Es el punto de partida de IBS actual (PowerBuilder + Sybase).</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Monolito Tradicional — IBS Legado</div>
+    <pre class="ascii">
+┌─────────────────────────────────────────────────────┐
+│                   MONOLITO IBS ACTUAL               │
+│                                                     │
+│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐ │
+│  │Clientes  │  │ Pagos    │  │  Contabilidad     │ │
+│  │ (PB UI)  │  │ (PB UI)  │  │  (PB UI)          │ │
+│  └────┬─────┘  └────┬─────┘  └─────┬─────────────┘ │
+│       │             │               │               │
+│       └─────────────┴───────────────┘               │
+│                     │                               │
+│             ┌───────▼──────────┐                    │
+│             │  Stored Procs    │  ◄── ~70% lógica   │
+│             │  (Sybase)        │     de negocio     │
+│             └───────┬──────────┘                    │
+│                     │                               │
+│             ┌───────▼──────────┐                    │
+│             │  Base de datos   │                    │
+│             │  Sybase          │                    │
+│             └──────────────────┘                    │
+└─────────────────────────────────────────────────────┘
+    Problema: todo acoplado, cambios rompen todo
+</pre>
+  </div>
+
+  <h3>Microservicios</h3>
+  <p>Servicios independientes, cada uno con su propia BD y ciclo de deploy. Máxima flexibilidad pero alta complejidad operativa.</p>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️</div>
+    <div class="callout-text">
+      <strong>¿Por qué NO microservicios para IBS?</strong> La contabilidad bancaria requiere consistencia fuerte (ACID). Coordinar transacciones distribuidas entre docenas de microservicios introduce una complejidad enorme. Además, ~70% de la lógica está en stored procedures cross-domain, lo que hace el corte de servicios extremadamente difícil.
+    </div>
+  </div>
+
+  <h3>Monolito Modular ← Nuestra elección</h3>
+  <p>Un punto medio pragmático: <strong>un solo proceso desplegable</strong> con <strong>módulos internos bien delimitados</strong>. Cada módulo tiene su propio dominio, interfaces claras y puede eventualmente extraerse como servicio.</p>
+
+  <div class="compare-container">
+  <div class="compare-grid">
+    <div class="compare-header">Característica</div>
+    <div class="compare-header">Monolito Trad.</div>
+    <div class="compare-header">Microservicios</div>
+    <div class="compare-header">Monolito Modular</div>
+
+    <div class="compare-label">Despliegue</div>
+    <div class="compare-cell status-good">Unificado y Simple</div>
+    <div class="compare-cell status-bad">Independiente (Complejo)</div>
+    <div class="compare-cell status-good">Unificado (Simple)</div>
+
+    <div class="compare-label">Modularidad</div>
+    <div class="compare-cell status-bad">Baja (Código acoplado)</div>
+    <div class="compare-cell status-good">Extrema (Física)</div>
+    <div class="compare-cell status-good">Alta (Lógica)</div>
+
+    <div class="compare-label">Datos</div>
+    <div class="compare-cell status-good">ACID Fuerte</div>
+    <div class="compare-cell status-bad">Eventual (Sagas/Eventos)</div>
+    <div class="compare-cell status-mid">ACID (con límites)</div>
+
+    <div class="compare-label">Escalabilidad</div>
+    <div class="compare-cell status-mid">Vertical (Toda la app)</div>
+    <div class="compare-cell status-good">Horizontal (Por servicio)</div>
+    <div class="compare-cell status-mid">Vertical / Selectiva</div>
+
+    <div class="compare-label">Ops / Infra</div>
+    <div class="compare-cell status-good">Mínima</div>
+    <div class="compare-cell status-bad">Orquestación (K8s/Red)</div>
+    <div class="compare-cell status-good">Baja/Media</div>
+
+    <div class="compare-label">Mantenimiento</div>
+    <div class="compare-cell status-bad">Pesadilla</div>
+    <div class="compare-cell status-mid">Cambios de Contrato</div>
+    <div class="compare-cell status-good">Controlado y Seguro</div>
+  </div>
+</div>
+</section>

@@ -1,0 +1,79 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 6. CAPAS Y ENCAPSULAMIENTO -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="layers">
+  <span class="section-number">// 06</span>
+  <h2 class="section-title">Capas y Encapsulamiento</h2>
+  <p class="section-subtitle">Organización interna de cada módulo</p>
+
+  <h3>Arquitectura Interna de un Módulo</h3>
+  <p>Dentro de cada módulo, se aplica la <strong>Arquitectura Hexagonal</strong> (o Clean Architecture). El núcleo del dominio no conoce los detalles de infraestructura.</p>
+
+  <div class="layers">
+    <div class="layer" style="background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.3);">
+      <span>🖥️ Capa de Presentación / API</span>
+      <span>Controllers · BFF · DTOs de entrada</span>
+    </div>
+    <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ depende de ▼</div>
+    <div class="layer" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);">
+      <span>⚙️ Capa de Aplicación</span>
+      <span>Use Cases · Application Services · DTOs</span>
+    </div>
+    <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ depende de ▼</div>
+    <div class="layer" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);">
+      <span>💎 Capa de Dominio (núcleo)</span>
+      <span>Entities · Aggregates · Domain Services · Events</span>
+    </div>
+    <div style="text-align:center;color:var(--muted);font-size:11px;padding:2px;">▼ define interfaces, implementadas en ▼</div>
+    <div class="layer" style="background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);">
+      <span>🗄️ Capa de Infraestructura</span>
+      <span>Repositorios · ORM · Mensajería · APIs externas</span>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-icon">💡</div>
+    <div class="callout-text">
+      <strong>Regla de Dependencia:</strong> Las capas internas nunca conocen a las externas. El Dominio NO importa de Infraestructura. Si necesitas la BD desde el Dominio, defines una interfaz (IAccountRepository) y la Infraestructura la implementa. Esto se logra con <strong>Inyección de Dependencias</strong>.
+    </div>
+  </div>
+
+  <h3>Ejemplo en .NET para el módulo Pagos</h3>
+  <pre data-lang=".NET C#"><code><span class="c">// DOMINIO — No sabe nada de EF, SQL ni infraestructura</span>
+<span class="k">public class</span> <span class="t">Transferencia</span>
+{
+    <span class="k">public</span> <span class="t">TransferenciaId</span> Id { <span class="k">get</span>; <span class="k">private set</span>; }
+    <span class="k">public</span> <span class="t">Money</span> Monto { <span class="k">get</span>; <span class="k">private set</span>; }
+    <span class="k">public</span> <span class="t">CuentaId</span> CuentaOrigen { <span class="k">get</span>; <span class="k">private set</span>; }
+
+    <span class="k">public</span> <span class="t">Result</span> <span class="m">Ejecutar</span>(<span class="t">Cuenta</span> origen, <span class="t">Cuenta</span> destino)
+    {
+        <span class="k">if</span> (origen.Saldo < Monto)
+            <span class="k">return</span> <span class="t">Result</span>.<span class="m">Failure</span>(<span class="s">"Saldo insuficiente"</span>);
+        origen.<span class="m">Debitar</span>(Monto);
+        destino.<span class="m">Acreditar</span>(Monto);
+        <span class="m">AddDomainEvent</span>(<span class="k">new</span> <span class="t">TransferenciaEjecutadaEvent</span>(Id));
+        <span class="k">return</span> <span class="t">Result</span>.<span class="m">Success</span>();
+    }
+}
+
+<span class="c">// APLICACIÓN — Orquesta el flujo</span>
+<span class="k">public class</span> <span class="t">EjecutarTransferenciaUseCase</span>
+{
+    <span class="k">private readonly</span> <span class="t">ICuentaRepository</span> _cuentas;  <span class="c">// interfaz, no implementación</span>
+    <span class="k">private readonly</span> <span class="t">IEventPublisher</span> _events;
+
+    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">Result</span>&gt; <span class="m">Execute</span>(<span class="t">TransferirDto</span> cmd)
+    {
+        <span class="k">var</span> origen = <span class="k">await</span> _cuentas.<span class="m">GetById</span>(cmd.CuentaOrigenId);
+        <span class="k">var</span> destino = <span class="k">await</span> _cuentas.<span class="m">GetById</span>(cmd.CuentaDestinoId);
+        <span class="k">var</span> transferencia = <span class="k">new</span> <span class="t">Transferencia</span>(cmd.Monto);
+        <span class="k">var</span> result = transferencia.<span class="m">Ejecutar</span>(origen, destino);
+        <span class="k">if</span> (result.<span class="m">IsSuccess</span>())
+            <span class="k">await</span> _cuentas.<span class="m">Save</span>(origen, destino, transferencia);
+        <span class="k">return</span> result;
+    }
+}
+</code></pre>
+</section>

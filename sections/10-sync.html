@@ -1,0 +1,61 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 10. LLAMADAS SÍNCRONAS -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="sync">
+  <span class="section-number">// 10</span>
+  <h2 class="section-title">Integración Síncrona entre Módulos</h2>
+  <p class="section-subtitle">Cuándo usarla, cuándo no, y cómo implementarla</p>
+
+  <h3>¿Qué es una llamada síncrona?</h3>
+  <p>El módulo llamador <strong>espera la respuesta</strong> antes de continuar. El flujo es bloqueante.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Flujo síncrono — Módulo Pagos consulta Clientes</div>
+    <pre class="ascii">
+Módulo Pagos          Módulo Clientes
+     │                      │
+     │──── ValidarCliente ──►│
+     │       (bloquea)       │ consulta BD
+     │                      │ valida KYC/AML
+     │◄─── Result{ok/error}──│
+     │                       │
+     │ continúa con el pago   │
+</pre>
+  </div>
+
+  <h3>Implementación: Fachadas de Módulo en .NET</h3>
+  <pre data-lang="C# — Interfaz de Módulo"><code><span class="c">// En módulo Clientes — define su contrato público</span>
+<span class="k">public interface</span> <span class="t">IClientesFacade</span>
+{
+    <span class="t">Task</span>&lt;<span class="t">ClienteDto</span>&gt; <span class="m">GetCliente</span>(<span class="t">ClienteId</span> id);
+    <span class="t">Task</span>&lt;<span class="k">bool</span>&gt; <span class="m">ValidarKyc</span>(<span class="t">ClienteId</span> id);
+}
+
+<span class="c">// En módulo Pagos — usa la fachada, no sabe nada interno de Clientes</span>
+<span class="k">public class</span> <span class="t">ProcesarPagoUseCase</span>
+{
+    <span class="k">private readonly</span> <span class="t">IClientesFacade</span> _clientes;
+
+    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">Result</span>&gt; <span class="m">Execute</span>(<span class="t">OrdenPagoCmd</span> cmd)
+    {
+        <span class="c">// Llamada síncrona — espera validación</span>
+        <span class="k">var</span> kycOk = <span class="k">await</span> _clientes.<span class="m">ValidarKyc</span>(cmd.ClienteId);
+        <span class="k">if</span> (!kycOk) <span class="k">return</span> <span class="t">Result</span>.<span class="m">Failure</span>(<span class="s">"Cliente no validado KYC"</span>);
+        <span class="c">// ... continúa el pago</span>
+    }
+}
+</code></pre>
+
+  <h3>¿Cuándo usar llamadas síncronas?</h3>
+  <div class="card-grid cols-2">
+    <div class="card accent-green">
+      <h4>✅ Úsala cuando:</h4>
+      <p>• Necesitás la respuesta para continuar<br>• Es una validación de negocio (KYC, límites)<br>• El tiempo de espera es mínimo y predecible<br>• La consistencia inmediata es requerida</p>
+    </div>
+    <div class="card" style="border-color:rgba(248,113,113,.3)">
+      <h4>❌ Evítala cuando:</h4>
+      <p>• El módulo destino puede estar lento o caído<br>• La operación puede hacerse después<br>• Genera acoplamiento temporal<br>• Impacta en escalabilidad</p>
+    </div>
+  </div>
+</section>

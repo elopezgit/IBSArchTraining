@@ -1,0 +1,115 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 13. PATRÓN OUTBOX -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="outbox">
+  <span class="section-number">// 13</span>
+  <h2 class="section-title">Patrón Outbox</h2>
+  <p class="section-subtitle">Garantizar la publicación confiable de eventos junto con cambios de datos</p>
+
+  <h3>El Problema</h3>
+  <p>Guardar en la BD y publicar un evento son dos operaciones separadas. Entre ellas puede fallar el proceso.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Problema sin Outbox — Riesgo de pérdida de eventos</div>
+    <pre class="ascii">
+                        ❌ PROCESO FALLA AQUÍ ❌
+                                │
+Módulo Pagos ──► Guardar en BD ─┤─► Publicar evento
+                   (exitoso)    │   (nunca ocurre)
+                                │
+Resultado: BD actualizada, Contabilidad no se enteró
+</pre>
+  </div>
+
+  <h3>La Solución: Transactional Outbox</h3>
+  <p>Persistir el evento en la <strong>misma transacción</strong> que los datos, en una tabla <span class="ic">outbox</span>. Un proceso separado (Relay) publica los eventos pendientes.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Patrón Outbox — Garantía at-least-once delivery</div>
+    <pre class="ascii">
+ STEP 1: Una sola transacción atómica
+ ┌────────────────────────────────────────────┐
+ │  BEGIN TRANSACTION                        │
+ │    UPDATE cuentas SET saldo = saldo - 100  │
+ │    INSERT INTO outbox                      │
+ │      (type='TransferenciaEjecutada',       │
+ │       payload='{...}', published=false)    │
+ │  COMMIT TRANSACTION                        │
+ └────────────────────────────────────────────┘
+
+ STEP 2: Proceso Relay (background)
+ ┌────────────────────────────────────────────┐
+ │  SELECT * FROM outbox                      │
+ │  WHERE published = false                   │
+ │  ORDER BY created_at                       │
+ │                                            │
+ │  FOR EACH evento:                          │
+ │    → Publicar al Event Bus                 │
+ │    → UPDATE outbox SET published=true      │
+ └────────────────────────────────────────────┘
+</pre>
+  </div>
+
+  <h3>Implementación en .NET</h3>
+  <pre data-lang="C# — Outbox Pattern"><code><span class="c">// 1. Tabla outbox (misma BD que el módulo)</span>
+<span class="k">public class</span> <span class="t">OutboxMessage</span>
+{
+    <span class="k">public</span> <span class="t">Guid</span> Id { <span class="k">get</span>; <span class="k">set</span>; } = <span class="t">Guid</span>.<span class="m">NewGuid</span>();
+    <span class="k">public</span> <span class="k">string</span> Type { <span class="k">get</span>; <span class="k">set</span>; }       <span class="c">// "TransferenciaEjecutada"</span>
+    <span class="k">public</span> <span class="k">string</span> Payload { <span class="k">get</span>; <span class="k">set</span>; }    <span class="c">// JSON serializado</span>
+    <span class="k">public bool</span> Published { <span class="k">get</span>; <span class="k">set</span>; }
+    <span class="k">public</span> <span class="t">DateTime</span> CreatedAt { <span class="k">get</span>; <span class="k">set</span>; }
+}
+
+<span class="c">// 2. En el Application Service — guardar dato + outbox en una transacción</span>
+<span class="k">public class</span> <span class="t">EjecutarTransferenciaHandler</span>
+{
+    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">Result</span>&gt; <span class="m">Handle</span>(<span class="t">TransferirCmd</span> cmd)
+    {
+        <span class="k">await using var</span> tx = <span class="k">await</span> _db.<span class="m">BeginTransactionAsync</span>();
+        <span class="k">try</span>
+        {
+            <span class="c">// Operación de negocio</span>
+            <span class="k">var</span> transferencia = <span class="k">await</span> _service.<span class="m">Ejecutar</span>(cmd);
+
+            <span class="c">// Guardar evento en outbox — MISMA transacción</span>
+            _db.OutboxMessages.<span class="m">Add</span>(<span class="k">new</span> <span class="t">OutboxMessage</span>
+            {
+                Type = <span class="s">"TransferenciaEjecutada"</span>,
+                Payload = <span class="t">JsonSerializer</span>.<span class="m">Serialize</span>(transferencia),
+            });
+
+            <span class="k">await</span> _db.<span class="m">SaveChangesAsync</span>();
+            <span class="k">await</span> tx.<span class="m">CommitAsync</span>();
+            <span class="k">return</span> <span class="t">Result</span>.<span class="m">Success</span>();
+        }
+        <span class="k">catch</span>
+        {
+            <span class="k">await</span> tx.<span class="m">RollbackAsync</span>();
+            <span class="k">throw</span>;
+        }
+    }
+}
+
+<span class="c">// 3. Relay — background service que publica lo pendiente</span>
+<span class="k">public class</span> <span class="t">OutboxRelayService</span> : <span class="t">BackgroundService</span>
+{
+    <span class="k">protected override async</span> <span class="t">Task</span> <span class="m">ExecuteAsync</span>(<span class="t">CancellationToken</span> ct)
+    {
+        <span class="k">while</span> (!ct.<span class="m">IsCancellationRequested</span>())
+        {
+            <span class="k">var</span> pending = <span class="k">await</span> _db.OutboxMessages
+                .<span class="m">Where</span>(m => !m.Published).<span class="m">ToListAsync</span>();
+            <span class="k">foreach</span> (<span class="k">var</span> msg <span class="k">in</span> pending)
+            {
+                <span class="k">await</span> _eventBus.<span class="m">Publish</span>(msg.Type, msg.Payload);
+                msg.Published = <span class="k">true</span>;
+            }
+            <span class="k">await</span> _db.<span class="m">SaveChangesAsync</span>();
+            <span class="k">await</span> <span class="t">Task</span>.<span class="m">Delay</span>(<span class="v">1000</span>, ct);
+        }
+    }
+}
+</code></pre>
+</section>

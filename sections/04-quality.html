@@ -1,0 +1,64 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 4. ATRIBUTOS DE CALIDAD -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="quality">
+  <span class="section-number">// 04</span>
+  <h2 class="section-title">Atributos de Calidad</h2>
+  <p class="section-subtitle">Las "-ilities" que definen si el sistema es exitoso, más allá de la funcionalidad</p>
+
+  <p>Los atributos de calidad (también llamados <em>non-functional requirements</em> o <em>architectural characteristics</em>) son los criterios de éxito del sistema que <strong>no dependen de la funcionalidad</strong>. Para IBS, el Blueprint define:</p>
+
+  <div class="card-grid cols-3">
+    <div class="card accent-blue">
+      <div class="card-icon">⚡</div>
+      <h4>Performance</h4>
+      <p>Latencia y tiempo de respuesta. IBS mide p95/p99 por transacción crítica. Meta: &lt;500ms en transacciones OLTP.</p>
+    </div>
+    <div class="card accent-green">
+      <div class="card-icon">🔄</div>
+      <h4>Disponibilidad</h4>
+      <p>Uptime del sistema, generalmente en "nines" (99.9% = 8.7hs downtime/año). Crítico para operación bancaria.</p>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-icon">📈</div>
+      <h4>Escalabilidad</h4>
+      <p>Mantener performance bajo carga creciente. Diferente de elasticidad (respuesta a bursts).</p>
+    </div>
+    <div class="card accent-orange">
+      <div class="card-icon">🔒</div>
+      <h4>Seguridad</h4>
+      <p>Autenticación, autorización, segregación de funciones, auditoría. Por diseño, no como parche.</p>
+    </div>
+    <div class="card accent-pink">
+      <div class="card-icon">🔧</div>
+      <h4>Mantenibilidad</h4>
+      <p>Facilidad de modificar el sistema sin efectos secundarios. Los bounded contexts del monolito modular la favorecen.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🌱</div>
+      <h4>Flexibilidad / Agilidad</h4>
+      <p>Capacidad de responder a cambios de negocio. Relacionada con testability y deployability.</p>
+    </div>
+  </div>
+
+  <h3>Escalabilidad vs Elasticidad — Diferencia clave</h3>
+
+  <div class="card-grid cols-2">
+    <div class="card">
+      <h4>📊 Escalabilidad</h4>
+      <p>Performance consistente ante un <strong>número creciente y sostenido</strong> de usuarios. Ejemplo: el banco agrega 10.000 nuevos clientes.</p>
+    </div>
+    <div class="card">
+      <h4>⚡ Elasticidad</h4>
+      <p>Resistencia ante <strong>bursts</strong> de tráfico súbito. Ejemplo: cierre mensual, pago de haberes — todos los cajeros a la vez.</p>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon">ℹ️</div>
+    <div class="callout-text">
+      <strong>Regla de oro:</strong> No se pueden optimizar todos los atributos simultáneamente. Elegir las 3 más importantes para el sistema y dejar que guíen las decisiones de diseño. Para IBS: <strong>Disponibilidad · Seguridad/Auditoría · Mantenibilidad</strong>.
+    </div>
+  </div>
+</section>

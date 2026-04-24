@@ -1,0 +1,84 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 11. LLAMADAS ASÍNCRONAS -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="async">
+  <span class="section-number">// 11</span>
+  <h2 class="section-title">Integración Asíncrona — Colas y Eventos</h2>
+  <p class="section-subtitle">Event-Driven Architecture dentro del monolito modular</p>
+
+  <h3>Comunicación Asíncrona</h3>
+  <p>El módulo publicador <strong>no espera respuesta</strong>. Publica un mensaje/evento y continúa. Los suscriptores reaccionan cuando pueden.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Event-Driven — Transferencia ejecutada notifica Contabilidad</div>
+    <pre class="ascii">
+Módulo Pagos          Event Bus          Módulo Contabilidad
+     │                   │                      │
+     │ ejecuta pago       │                      │
+     │──TransferenciaEjec►│                      │
+     │ (continúa)         │                      │
+     │                    │──TransferenciaEjec──►│
+     │                    │                      │ registra asientos
+     │                    │                      │ GL independiente
+</pre>
+  </div>
+
+  <h3>Tipos de Comunicación Asíncrona</h3>
+  <div class="card-grid cols-2">
+    <div class="card accent-blue">
+      <h4>📨 Cola (Queue)</h4>
+      <p><strong>Point-to-point.</strong> Un productor, un consumidor. Cada mensaje es procesado por exactamente un receptor. Ideal para comandos: "Procesar esta transferencia".</p>
+    </div>
+    <div class="card accent-purple">
+      <h4>📡 Topic / Event</h4>
+      <p><strong>Pub/Sub.</strong> Un productor, múltiples consumidores. Todos los interesados reciben la copia. Ideal para eventos: "TransferenciaEjecutada" → notifica Contabilidad, Notificaciones, Reportes.</p>
+    </div>
+  </div>
+
+  <h3>Implementación en .NET (MediatR + eventos de dominio)</h3>
+  <pre data-lang="C# — Events"><code><span class="c">// 1. Definir el Domain Event</span>
+<span class="k">public record</span> <span class="t">TransferenciaEjecutadaEvent</span>(
+    <span class="t">TransferenciaId</span> Id,
+    <span class="t">Money</span> Monto,
+    <span class="t">CuentaId</span> Origen,
+    <span class="t">CuentaId</span> Destino,
+    <span class="t">DateTime</span> FechaEjecucion
+) : <span class="t">IDomainEvent</span>;
+
+<span class="c">// 2. Publicar desde el Aggregate Root (automático al guardar)</span>
+<span class="k">public class</span> <span class="t">CuentaCorriente</span> : <span class="t">AggregateRoot</span>
+{
+    <span class="k">public void</span> <span class="m">Debitar</span>(<span class="t">Money</span> monto)
+    {
+        <span class="c">// ... lógica</span>
+        <span class="m">AddDomainEvent</span>(<span class="k">new</span> <span class="t">TransferenciaEjecutadaEvent</span>(...));
+    }
+}
+
+<span class="c">// 3. Handler en Contabilidad — reacciona al evento</span>
+<span class="k">public class</span> <span class="t">RegistrarAsientosHandler</span>
+    : <span class="t">INotificationHandler</span>&lt;<span class="t">TransferenciaEjecutadaEvent</span>&gt;
+{
+    <span class="k">public async</span> <span class="t">Task</span> <span class="m">Handle</span>(<span class="t">TransferenciaEjecutadaEvent</span> evt,
+                             <span class="t">CancellationToken</span> ct)
+    {
+        <span class="c">// Registrar débito y crédito en GL</span>
+        <span class="k">await</span> _glService.<span class="m">RegistrarAsientos</span>(
+            <span class="m">AsientoDebito</span>(evt.Origen, evt.Monto),
+            <span class="m">AsientoCredito</span>(evt.Destino, evt.Monto)
+        );
+    }
+}
+</code></pre>
+
+  <h3>¿Cuándo usar cada tipo?</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Patrón</th><th>Cuándo</th><th>Ejemplo IBS</th></tr>
+      <tr><td>Síncrono (REST/Facade)</td><td>Necesito respuesta, validación crítica</td><td>Validar KYC antes de operar</td></tr>
+      <tr><td>Cola (Command)</td><td>Trabajo a procesar, garantía de entrega</td><td>Procesar batch de pagos</td></tr>
+      <tr><td>Evento (Pub/Sub)</td><td>Notificar cambios, múltiples interesados</td><td>CuentaAbierta → notifica Seguridad, Reportes</td></tr>
+    </table>
+  </div>
+</section>

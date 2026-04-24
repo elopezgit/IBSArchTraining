@@ -1,0 +1,80 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 15. OBSERVABILIDAD -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="observability">
+  <span class="section-number">// 15</span>
+  <h2 class="section-title">Observabilidad</h2>
+  <p class="section-subtitle">Ver qué pasa adentro del sistema sin necesidad de reiniciarlo</p>
+
+  <p>Observabilidad = capacidad de entender el estado interno de un sistema a partir de sus outputs externos. Los tres pilares son:</p>
+
+  <div class="card-grid cols-3">
+    <div class="card accent-blue">
+      <div class="card-icon">📝</div>
+      <h4>Logs Estructurados</h4>
+      <p>Logs en formato JSON (no texto libre). Permiten búsqueda, filtrado y agregación en herramientas como Elasticsearch o Splunk.</p>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-icon">🔍</div>
+      <h4>Trazabilidad (Tracing)</h4>
+      <p>Seguir una transacción de punta a punta a través de todos los módulos. Requiere propagar un Correlation ID.</p>
+    </div>
+    <div class="card accent-green">
+      <div class="card-icon">📊</div>
+      <h4>Métricas</h4>
+      <p>Datos numéricos en el tiempo: latencia p95/p99, tasa de errores, throughput, uso de memoria. Expuestos via Prometheus/Grafana.</p>
+    </div>
+  </div>
+
+  <h3>Correlation ID — La clave de la trazabilidad</h3>
+  <p>Un identificador único que se genera en la entrada del sistema y se propaga a <strong>todos los módulos, logs y eventos</strong> de esa transacción.</p>
+
+  <pre data-lang="C# — Correlation ID Middleware"><code><span class="c">// Middleware que asegura que toda request tenga correlation ID</span>
+<span class="k">public class</span> <span class="t">CorrelationIdMiddleware</span>
+{
+    <span class="k">public async</span> <span class="t">Task</span> <span class="m">InvokeAsync</span>(<span class="t">HttpContext</span> context)
+    {
+        <span class="c">// Tomar del header o generar uno nuevo</span>
+        <span class="k">var</span> correlationId = context.Request.Headers[<span class="s">"X-Correlation-ID"</span>]
+            .<span class="m">FirstOrDefault</span>() ?? <span class="t">Guid</span>.<span class="m">NewGuid</span>().<span class="m">ToString</span>();
+
+        <span class="c">// Disponible en toda la request</span>
+        context.Items[<span class="s">"CorrelationId"</span>] = correlationId;
+        context.Response.Headers[<span class="s">"X-Correlation-ID"</span>] = correlationId;
+
+        <span class="c">// Propagar en todos los logs de esta request</span>
+        <span class="k">using</span> (<span class="t">LogContext</span>.<span class="m">PushProperty</span>(<span class="s">"CorrelationId"</span>, correlationId))
+        {
+            <span class="k">await</span> _next(context);
+        }
+    }
+}
+
+<span class="c">// Log estructurado — todos llevan CorrelationId</span>
+_logger.<span class="m">Information</span>(
+    <span class="s">"Transferencia {TransferenciaId} ejecutada por {ClienteId} por {Monto}"</span>,
+    transferencia.Id, cmd.ClienteId, cmd.Monto);
+
+<span class="c">// Output JSON:
+// {
+//   "timestamp": "2026-04-24T...",
+//   "level": "Information",
+//   "message": "Transferencia T-001 ejecutada por C-123 por 1000",
+//   "correlationId": "550e8400-e29b-41d4-a716",
+//   "module": "Pagos",
+//   "transferenciaId": "T-001"
+// }</span>
+</code></pre>
+
+  <h3>KPIs de Observabilidad para IBS (del Blueprint)</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Métrica</th><th>Fórmula</th><th>Cadencia</th></tr>
+      <tr><td>p95/p99 transacciones críticas</td><td>Latencia p95/p99 por tipo de tx</td><td>Semanal</td></tr>
+      <tr><td>Cobertura observabilidad</td><td>Tx con correlation ID / total modernizadas</td><td>Semanal</td></tr>
+      <tr><td>MTTR en piloto</td><td>Tiempo medio de resolución P1/P2</td><td>Semanal</td></tr>
+      <tr><td>Tasa de compensación SAGA</td><td>Compensaciones / ejecuciones SAGA</td><td>Semanal</td></tr>
+    </table>
+  </div>
+</section>

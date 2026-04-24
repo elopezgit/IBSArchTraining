@@ -1,0 +1,21 @@
+
+<section class="section" id="resilience">
+    <span class="section-number">// 18</span>
+    <h2 class="section-title">Resiliencia y Estabilidad</h2>
+    <p>Estrategias críticas para asegurar que el IBS no falle ante errores de terceros o alta carga.</p>
+    
+    <div class="card-grid cols-3">
+        <div class="card accent-blue">
+            <h4>Retry Pattern</h4>
+            <p>Reintenta operaciones fallidas transitorias (ej. timeout de red) con <em>Exponential Backoff</em>.</p>
+        </div>
+        <div class="card accent-purple">
+            <h4>Circuit Breaker</h4>
+            <p>Evita llamadas a servicios caídos para no saturar el sistema y permitir la recuperación.</p>
+        </div>
+        <div class="card accent-green">
+            <h4>Idempotencia</h4>
+            <p>Garantiza que procesar la misma transacción dos veces no duplique los saldos.</p>
+        </div>
+    </div>
+</section>

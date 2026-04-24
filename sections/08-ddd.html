@@ -1,0 +1,96 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 8. DDD PRÁCTICO -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="ddd">
+  <span class="section-number">// 08</span>
+  <h2 class="section-title">DDD Práctico</h2>
+  <p class="section-subtitle">Domain-Driven Design — el lenguaje para modelar el dominio bancario</p>
+
+  <p>DDD (Eric Evans, 2003) es un enfoque de diseño que pone el <strong>modelo de dominio en el centro</strong>. El código habla el mismo idioma que el negocio.</p>
+
+  <h3>Bloques de Construcción</h3>
+
+  <div class="card-grid cols-2">
+    <div class="card accent-purple">
+      <h4>🏛️ Entity (Entidad)</h4>
+      <p>Objeto con <strong>identidad única</strong> que persiste en el tiempo. Ej: <span class="ic">Cuenta</span>, <span class="ic">Cliente</span>, <span class="ic">Transferencia</span>. Dos cuentas con distinto ID son objetos distintos aunque tengan el mismo saldo.</p>
+    </div>
+    <div class="card accent-blue">
+      <h4>💎 Value Object</h4>
+      <p>Objeto definido por sus <strong>atributos, sin identidad</strong>. Son inmutables. Ej: <span class="ic">Money</span>, <span class="ic">IBAN</span>, <span class="ic">Periodo</span>. Dos Money(100, ARS) son iguales e intercambiables.</p>
+    </div>
+    <div class="card accent-green">
+      <h4>🫙 Aggregate</h4>
+      <p>Grupo de entidades que forman una <strong>unidad de consistencia</strong>. Solo se accede desde la raíz (Aggregate Root). Ej: <span class="ic">CuentaCorriente</span> con sus movimientos.</p>
+    </div>
+    <div class="card accent-orange">
+      <h4>⚙️ Domain Service</h4>
+      <p>Operaciones de dominio que <strong>no pertenecen naturalmente a una entidad</strong>. Ej: <span class="ic">CalculadoraIntereses</span>, <span class="ic">ValidadorLimitePagos</span>.</p>
+    </div>
+    <div class="card accent-pink">
+      <h4>📡 Domain Event</h4>
+      <p>Algo que <strong>ocurrió en el dominio</strong> y otros módulos pueden necesitar saber. Ej: <span class="ic">CuentaAbierta</span>, <span class="ic">TransferenciaEjecutada</span>, <span class="ic">PrestamoAprobado</span>.</p>
+    </div>
+    <div class="card">
+      <h4>🗄️ Repository</h4>
+      <p><strong>Interfaz</strong> para persistir y recuperar Aggregates. El Dominio define qué necesita; la Infraestructura implementa cómo.</p>
+    </div>
+  </div>
+
+  <h3>Application Service vs Domain Service</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th></th><th>Application Service</th><th>Domain Service</th></tr>
+      <tr><td><strong>Capa</strong></td><td>Aplicación</td><td>Dominio</td></tr>
+      <tr><td><strong>Conoce BD</strong></td><td>Sí (a través de repos)</td><td>No</td></tr>
+      <tr><td><strong>Contiene lógica de negocio</strong></td><td>No (solo orquesta)</td><td>Sí</td></tr>
+      <tr><td><strong>Ejemplo</strong></td><td>EjecutarTransferenciaUseCase</td><td>CalculadoraIntereses</td></tr>
+      <tr><td><strong>Llama a</strong></td><td>Domain Services, Repos</td><td>Entities, Value Objects</td></tr>
+    </table>
+  </div>
+
+  <h3>Ejemplo completo: Módulo Cuentas</h3>
+  <pre data-lang="C# — DDD"><code><span class="c">// VALUE OBJECT — inmutable, sin identidad</span>
+<span class="k">public record</span> <span class="t">Money</span>(<span class="k">decimal</span> Amount, <span class="t">Currency</span> Currency)
+{
+    <span class="k">public</span> <span class="t">Money</span> <span class="m">Add</span>(<span class="t">Money</span> other)
+    {
+        <span class="k">if</span> (Currency != other.Currency) <span class="k">throw new</span> <span class="t">InvalidOperationException</span>();
+        <span class="k">return new</span> <span class="t">Money</span>(Amount + other.Amount, Currency);
+    }
+    <span class="k">public static bool operator</span> &gt;=(<span class="t">Money</span> a, <span class="t">Money</span> b) => a.Amount >= b.Amount;
+}
+
+<span class="c">// AGGREGATE ROOT — unidad de consistencia</span>
+<span class="k">public class</span> <span class="t">CuentaCorriente</span> : <span class="t">AggregateRoot</span>&lt;<span class="t">CuentaId</span>&gt;
+{
+    <span class="k">public</span> <span class="t">ClienteId</span> Titular { <span class="k">get</span>; <span class="k">private set</span>; }
+    <span class="k">public</span> <span class="t">Money</span> Saldo { <span class="k">get</span>; <span class="k">private set</span>; }
+    <span class="k">private</span> <span class="t">List</span>&lt;<span class="t">Movimiento</span>&gt; _movimientos = <span class="k">new</span>();
+
+    <span class="c">// Lógica de negocio dentro del aggregate</span>
+    <span class="k">public void</span> <span class="m">Debitar</span>(<span class="t">Money</span> monto, <span class="k">string</span> concepto)
+    {
+        <span class="k">if</span> (Saldo < monto)
+            <span class="k">throw new</span> <span class="t">SaldoInsuficienteException</span>(Id, monto);
+        Saldo = Saldo - monto;
+        _movimientos.<span class="m">Add</span>(<span class="t">Movimiento</span>.<span class="m">Debito</span>(monto, concepto));
+        <span class="m">AddDomainEvent</span>(<span class="k">new</span> <span class="t">SaldoActualizadoEvent</span>(Id, Saldo));
+    }
+}
+
+<span class="c">// DOMAIN SERVICE — opera sobre múltiples aggregates</span>
+<span class="k">public class</span> <span class="t">ServicioTransferencia</span>
+{
+    <span class="k">public</span> <span class="t">Result</span> <span class="m">Transferir</span>(<span class="t">CuentaCorriente</span> origen, 
+                              <span class="t">CuentaCorriente</span> destino, 
+                              <span class="t">Money</span> monto)
+    {
+        origen.<span class="m">Debitar</span>(monto, <span class="s">"Transferencia saliente"</span>);
+        destino.<span class="m">Acreditar</span>(monto, <span class="s">"Transferencia entrante"</span>);
+        <span class="k">return</span> <span class="t">Result</span>.<span class="m">Success</span>();
+    }
+}
+</code></pre>
+</section>

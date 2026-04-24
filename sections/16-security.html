@@ -1,0 +1,95 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 16. SEGURIDAD -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="security">
+  <span class="section-number">// 16</span>
+  <h2 class="section-title">Seguridad</h2>
+  <p class="section-subtitle">Autenticación, Autorización y Seguridad en APIs</p>
+
+  <div class="card-grid cols-2">
+    <div class="card accent-blue">
+      <div class="card-icon">🔐</div>
+      <h4>Autenticación (AuthN)</h4>
+      <p><strong>¿Quién sos?</strong> Verificar la identidad del usuario o sistema. En IBS: OIDC (OpenID Connect) sobre OAuth 2.0. El usuario se autentica contra un Identity Provider y recibe un JWT.</p>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-icon">🛡️</div>
+      <h4>Autorización (AuthZ)</h4>
+      <p><strong>¿Qué podés hacer?</strong> Verificar que el usuario autenticado tiene permiso para la operación. En IBS: RBAC (Role-Based Access Control) + segregación de funciones.</p>
+    </div>
+  </div>
+
+  <h3>Flujo JWT en APIs</h3>
+
+  <div class="diagram">
+    <div class="diagram-title">Flujo de Autenticación con JWT</div>
+    <pre class="ascii">
+ Cliente/App         Identity Provider        API IBS
+     │                      │                   │
+     │── Login (usr/pwd) ──►│                   │
+     │                      │ valida credencial  │
+     │◄── JWT Token ────────│                   │
+     │   {                  │                   │
+     │    "sub": "user-123" │                   │
+     │    "roles": ["cajero"]│                  │
+     │    "exp": 1714000000 │                   │
+     │   }                  │                   │
+     │                      │                   │
+     │─── POST /transferencias ─────────────────►│
+     │    Authorization: Bearer {JWT}            │
+     │                                           │ valida firma JWT
+     │                                           │ verifica roles
+     │◄────────────────────── 200 OK ────────────│
+</pre>
+  </div>
+
+  <h3>Implementación en .NET</h3>
+  <pre data-lang="C# — JWT + RBAC"><code><span class="c">// Registrar autenticación JWT en Program.cs</span>
+builder.Services.<span class="m">AddAuthentication</span>(<span class="t">JwtBearerDefaults</span>.AuthenticationScheme)
+    .<span class="m">AddJwtBearer</span>(options =>
+    {
+        options.Authority = <span class="s">"https://identity.ibs.bank"</span>;
+        options.Audience = <span class="s">"ibs-api"</span>;
+    });
+
+builder.Services.<span class="m">AddAuthorization</span>(options =>
+{
+    <span class="c">// Políticas basadas en roles — segregación de funciones</span>
+    options.<span class="m">AddPolicy</span>(<span class="s">"PuedeProcesarPagos"</span>, p =>
+        p.<span class="m">RequireRole</span>(<span class="s">"cajero"</span>, <span class="s">"supervisor"</span>));
+
+    options.<span class="m">AddPolicy</span>(<span class="s">"PuedeAprobarCreditos"</span>, p =>
+        p.<span class="m">RequireRole</span>(<span class="s">"analista-creditos"</span>, <span class="s">"gerente"</span>));
+
+    options.<span class="m">AddPolicy</span>(<span class="s">"SoloLectura"</span>, p =>
+        p.<span class="m">RequireRole</span>(<span class="s">"auditor"</span>, <span class="s">"consulta"</span>));
+});
+
+<span class="c">// Proteger endpoints</span>
+[<span class="t">Authorize</span>(Policy = <span class="s">"PuedeProcesarPagos"</span>)]
+[<span class="t">HttpPost</span>(<span class="s">"transferencias"</span>)]
+<span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">IActionResult</span>&gt; <span class="m">Transfer</span>(<span class="t">TransferirRequest</span> req)
+{ ... }
+</code></pre>
+
+  <h3>Principios de Seguridad por Diseño (Blueprint IBS)</h3>
+  <div class="card-grid cols-2">
+    <div class="card accent-orange">
+      <h4>🔍 Auditoría Inmutable</h4>
+      <p>Toda operación sensible se registra en una tabla append-only. Nadie puede modificar el historial de operaciones. Requerimiento regulatorio bancario.</p>
+    </div>
+    <div class="card accent-green">
+      <h4>🔒 Segregación de Funciones</h4>
+      <p>Quien aprueba no es quien ejecuta. Quien puede ver datos de clientes no puede procesar pagos. Previene fraude interno.</p>
+    </div>
+    <div class="card accent-pink">
+      <h4>🛡️ DLP (Data Loss Prevention)</h4>
+      <p>Datos sensibles (PII, números de cuenta) se tokenizan o cifran. Nadie accede al dato real salvo el módulo que lo gestiona.</p>
+    </div>
+    <div class="card accent-blue">
+      <h4>🌐 Zero Trust en APIs</h4>
+      <p>Toda llamada entre módulos debe autenticarse, incluso si vienen de dentro del mismo proceso. Un módulo comprometido no compromete a otros.</p>
+    </div>
+  </div>
+</section>

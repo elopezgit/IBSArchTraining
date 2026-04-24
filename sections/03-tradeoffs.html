@@ -1,0 +1,54 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 3. TRADE-OFFS -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="tradeoffs">
+  <span class="section-number">// 03</span>
+  <h2 class="section-title">Trade-offs Arquitectónicos</h2>
+  <p class="section-subtitle">Toda decisión arquitectónica tiene un precio. El trabajo es conocer cuál.</p>
+
+  <p>Un trade-off es intercambiar una ventaja por otra. <strong>No existen decisiones gratuitas en arquitectura.</strong></p>
+
+  <h3>Ejemplo Real: ¿SAGAs o Transacciones Distribuidas?</h3>
+
+  <div class="card-grid cols-2">
+    <div class="card accent-green">
+      <h4>✅ SAGA (elegido para IBS)</h4>
+      <p><strong>Ventajas:</strong> Alta disponibilidad, bajo acoplamiento, no bloquea recursos.</p>
+      <p><strong>Costos:</strong> Consistencia eventual, necesita compensaciones, mayor complejidad de desarrollo.</p>
+    </div>
+    <div class="card" style="border-color:rgba(248,113,113,.3)">
+      <h4>❌ 2PC (Two-Phase Commit)</h4>
+      <p><strong>Ventajas:</strong> Consistencia ACID garantizada, más simple de razonar.</p>
+      <p><strong>Costos:</strong> Bloqueo de recursos, baja disponibilidad si un servicio falla, no escala.</p>
+    </div>
+  </div>
+
+  <h3>Framework de Análisis de Trade-offs</h3>
+  <p>Para cualquier decisión, evaluar estas tres dimensiones (Head First SA):</p>
+
+  <div class="card-grid cols-3">
+    <div class="card">
+      <div class="card-icon">🎯</div>
+      <h4>¿Estratégico o Táctico?</h4>
+      <p>Estratégico = largo plazo, muchos stakeholders, difícil de cambiar → <span class="badge badge-blue">Arquitectura</span></p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚙️</div>
+      <h4>¿Cuánto esfuerzo para cambiar?</h4>
+      <p>Alto esfuerzo = decisión arquitectónica. Bajo esfuerzo = decisión de diseño.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚖️</div>
+      <h4>¿Trade-offs significativos?</h4>
+      <p>Más trade-offs → más análisis requerido → más arquitectónica la decisión.</p>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-icon">💡</div>
+    <div class="callout-text">
+      <strong>Consejo práctico para IBS:</strong> Ante cada decisión técnica, documentarla como ADR (Architecture Decision Record) con: contexto, opciones consideradas, decisión tomada y trade-offs aceptados. Esto previene re-debates y aclara el razonamiento para nuevos integrantes.
+    </div>
+  </div>
+</section>

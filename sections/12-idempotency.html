@@ -1,0 +1,62 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 12. IDEMPOTENCIA -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="idempotency">
+  <span class="section-number">// 12</span>
+  <h2 class="section-title">Idempotencia</h2>
+  <p class="section-subtitle">Ejecutar la misma operación N veces debe tener el mismo efecto que ejecutarla una vez</p>
+
+  <p>En sistemas distribuidos y bancarios, los reintentos son inevitables (timeouts, caídas de red, errores transitorios). La idempotencia garantiza que reintentar no genera duplicados.</p>
+
+  <div class="callout warn">
+    <div class="callout-icon">🚨</div>
+    <div class="callout-text">
+      <strong>Escenario crítico en IBS:</strong> Un pago se envía, la red falla antes de recibir respuesta. El cliente reintenta. Si el sistema no es idempotente → el cliente paga dos veces. Esto es un error regulatorio grave en un sistema bancario.
+    </div>
+  </div>
+
+  <h3>Implementación con Idempotency-Key</h3>
+  <pre data-lang="C# — Idempotencia"><code><span class="c">// 1. El cliente envía un idempotency-key único por operación</span>
+POST /api/pagos/transferencias
+Headers:
+  Idempotency-Key: <span class="s">"client-uuid-550e8400"</span>
+Body:
+  { "monto": 1000, "destino": "CR-001" }
+
+<span class="c">// 2. El endpoint verifica si ya fue procesado</span>
+<span class="k">public class</span> <span class="t">TransferenciasController</span>
+{
+    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">IActionResult</span>&gt; <span class="m">Post</span>(
+        [<span class="t">FromHeader</span>] <span class="k">string</span> idempotencyKey,
+        <span class="t">TransferirRequest</span> request)
+    {
+        <span class="c">// Buscar si ya existe resultado para esta key</span>
+        <span class="k">var</span> cached = <span class="k">await</span> _idempotency.<span class="m">TryGetResult</span>(idempotencyKey);
+        <span class="k">if</span> (cached != <span class="k">null</span>) <span class="k">return</span> <span class="m">Ok</span>(cached);   <span class="c">// devuelve resultado previo</span>
+
+        <span class="c">// Primera vez — procesar</span>
+        <span class="k">var</span> result = <span class="k">await</span> _useCase.<span class="m">Execute</span>(request);
+
+        <span class="c">// Guardar resultado para futuros reintentos</span>
+        <span class="k">await</span> _idempotency.<span class="m">SaveResult</span>(idempotencyKey, result, <span class="t">TimeSpan</span>.<span class="m">FromHours</span>(<span class="v">24</span>));
+        <span class="k">return</span> <span class="m">Ok</span>(result);
+    }
+}
+
+<span class="c">// 3. Tabla de idempotencia (persiste en misma BD)</span>
+<span class="n">CREATE TABLE</span> idempotency_keys (
+    key        <span class="n">VARCHAR</span>(100) <span class="n">PRIMARY KEY</span>,
+    result     <span class="n">JSONB</span>,
+    created_at <span class="n">TIMESTAMP</span>,
+    expires_at <span class="n">TIMESTAMP</span>
+);
+</code></pre>
+
+  <div class="callout tip">
+    <div class="callout-icon">💡</div>
+    <div class="callout-text">
+      <strong>Dónde aplica en IBS:</strong> Toda operación de escritura que pueda reintentarse debe ser idempotente: transferencias, pagos, apertura de cuentas, posteos contables. Los SAGAs también requieren idempotencia en cada paso para manejar reintentos ante fallas parciales.
+    </div>
+  </div>
+</section>

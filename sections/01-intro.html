@@ -1,0 +1,71 @@
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 1. INTRODUCCIÓN -->
+<!-- ══════════════════════════════════════════ -->
+<section class="section" id="intro">
+  <span class="section-number">// 01</span>
+  <h2 class="section-title">Introducción a la Arquitectura</h2>
+  <p class="section-subtitle">Qué es, qué no es, y por qué importa en IBS</p>
+
+  <h3>¿Qué es Arquitectura de Software?</h3>
+  <p>Richards & Ford (<em>Fundamentals of Software Architecture</em>) la definen como la combinación de cuatro elementos inseparables:</p>
+
+  <div class="card-grid cols-2">
+    <div class="card accent-blue">
+      <div class="card-icon">🏗️</div>
+      <h4>Estructura</h4>
+      <p>El tipo de estilo(s) arquitectónico(s) del sistema. Ej: monolito modular, microservicios, event-driven.</p>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-icon">⚡</div>
+      <h4>Características Arquitectónicas</h4>
+      <p>Los "-ilities": escalabilidad, disponibilidad, mantenibilidad, seguridad. Definen los criterios de éxito.</p>
+    </div>
+    <div class="card accent-green">
+      <div class="card-icon">📋</div>
+      <h4>Decisiones Arquitectónicas</h4>
+      <p>Las reglas y restricciones que guían cómo se construye el sistema. Ej: "La UI no accede a la BD directamente".</p>
+    </div>
+    <div class="card accent-orange">
+      <div class="card-icon">🧩</div>
+      <h4>Principios de Diseño</h4>
+      <p>Guías (no reglas duras) para el equipo. Ej: "Preferir comunicación asíncrona entre módulos".</p>
+    </div>
+  </div>
+
+  <div class="callout ref">
+    <div class="callout-icon">📖</div>
+    <div class="callout-text">
+      <strong>Primera Ley de la Arquitectura (Richards & Ford):</strong> "Everything in software architecture is a trade-off." — Si crees que encontraste algo sin trade-off, es que aún no identificaste el trade-off.
+    </div>
+  </div>
+
+  <h3>Arquitectura ≠ Diseño</h3>
+  <p>Es la confusión más común. La distinción importa porque determina <strong>quién toma la decisión</strong>:</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Espectro Arquitectura — Diseño</div>
+    <div style="display:flex;align-items:center;gap:0;margin-bottom:16px;">
+      <div style="background:rgba(79,156,249,.15);border:1px solid rgba(79,156,249,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#4f9cf9;font-weight:600;">ARQUITECTURA</div>
+      <div style="flex:1;height:2px;background:linear-gradient(90deg,rgba(79,156,249,.5),rgba(167,139,250,.5));"></div>
+      <div style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#a78bfa;font-weight:600;">DISEÑO</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
+      <span>Estratégico · Alto esfuerzo · Trade-offs grandes<br>Largo plazo · Muchos stakeholders</span>
+      <span style="text-align:right;">Táctico · Bajo esfuerzo · Trade-offs pequeños<br>Corto plazo · Decisión individual</span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Decisión</th><th>Tipo</th><th>Quién decide</th></tr>
+      <tr><td>Elegir monolito modular vs microservicios</td><td><span class="badge badge-blue">Arquitectura</span></td><td>Arquitecto + Stakeholders</td></tr>
+      <tr><td>Migrar de PowerBuilder a .NET</td><td><span class="badge badge-blue">Arquitectura</span></td><td>Arquitecto + Dirección</td></tr>
+      <tr><td>La UI no accede directamente a la BD</td><td><span class="badge badge-blue">Arquitectura</span></td><td>Arquitecto</td></tr>
+      <tr><td>Usar SAGAs para transacciones cross-módulo</td><td><span class="badge badge-blue">Arquitectura</span></td><td>Arquitecto + Tech Lead</td></tr>
+      <tr><td>Elegir un framework de logging</td><td><span class="badge badge-purple">Medio</span></td><td>Tech Lead + Equipo</td></tr>
+      <tr><td>Estructura interna de una clase</td><td><span class="badge badge-orange">Diseño</span></td><td>Desarrollador</td></tr>
+      <tr><td>Nombre de una variable</td><td><span class="badge badge-orange">Diseño</span></td><td>Desarrollador</td></tr>
+    </table>
+  </div>
+</section>
