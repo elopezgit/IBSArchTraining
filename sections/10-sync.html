@@ -1,61 +1,104 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 10. LLAMADAS SÍNCRONAS -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="sync">
-  <span class="section-number">// 10</span>
-  <h2 class="section-title">Integración Síncrona entre Módulos</h2>
-  <p class="section-subtitle">Cuándo usarla, cuándo no, y cómo implementarla</p>
+    <span class="section-number">// 10</span>
+    <h2 class="section-title">Integración Síncrona entre Módulos</h2>
+    <p class="section-subtitle">Colaboración inmediata: El patrón Request/Response interno.</p>
 
-  <h3>¿Qué es una llamada síncrona?</h3>
-  <p>El módulo llamador <strong>espera la respuesta</strong> antes de continuar. El flujo es bloqueante.</p>
+    <p>En el Monolito Modular de IBS, la integración síncrona ocurre cuando el <strong>Módulo A</strong> necesita una respuesta inmediata del <strong>Módulo B</strong> para decidir si continúa su proceso. Aunque ocurre dentro de la misma memoria (in-process), aplicamos el <strong>Principio de Menor Privilegio</strong>: el Módulo A solo ve la "cara pública" del Módulo B.</p>
 
-  <div class="diagram">
-    <div class="diagram-title">Flujo síncrono — Módulo Pagos consulta Clientes</div>
-    <pre class="ascii">
-Módulo Pagos          Módulo Clientes
-     │                      │
-     │──── ValidarCliente ──►│
-     │       (bloquea)       │ consulta BD
-     │                      │ valida KYC/AML
-     │◄─── Result{ok/error}──│
-     │                       │
-     │ continúa con el pago   │
-</pre>
-  </div>
+    <h3>El Concepto de "Fachada de Módulo" (Module Facade)</h3>
+    <p>Para mantener los módulos aislados, prohibimos que un módulo llame a las clases internas de otro. En su lugar, cada módulo expone un <strong>Contrato Público</strong> (Interface).</p>
 
-  <h3>Implementación: Fachadas de Módulo en .NET</h3>
-  <pre data-lang="C# — Interfaz de Módulo"><code><span class="c">// En módulo Clientes — define su contrato público</span>
-<span class="k">public interface</span> <span class="t">IClientesFacade</span>
-{
-    <span class="t">Task</span>&lt;<span class="t">ClienteDto</span>&gt; <span class="m">GetCliente</span>(<span class="t">ClienteId</span> id);
-    <span class="t">Task</span>&lt;<span class="k">bool</span>&gt; <span class="m">ValidarKyc</span>(<span class="t">ClienteId</span> id);
-}
+    
 
-<span class="c">// En módulo Pagos — usa la fachada, no sabe nada interno de Clientes</span>
-<span class="k">public class</span> <span class="t">ProcesarPagoUseCase</span>
-{
-    <span class="k">private readonly</span> <span class="t">IClientesFacade</span> _clientes;
+    <div class="diagram">
+        <div class="diagram-title">Secuencia: Validación de Disponibilidad de Fondos</div>
+        <pre class="ascii">
+[ Módulo PRÉSTAMOS ]          [ Módulo CUENTAS ]
+         │                             │
+         │─── ¿TieneSaldo(monto)? ────►│ (Ejecuta lógica de saldo)
+         │       (Bloqueado)           │ (Consulta DB Schema Cuentas)
+         │◄─────── true / false ───────│
+         │                             │
+    (Decide si                     (Libera hilo)
+     desembolsa)
+        </pre>
+    </div>
 
-    <span class="k">public async</span> <span class="t">Task</span>&lt;<span class="t">Result</span>&gt; <span class="m">Execute</span>(<span class="t">OrdenPagoCmd</span> cmd)
-    {
-        <span class="c">// Llamada síncrona — espera validación</span>
-        <span class="k">var</span> kycOk = <span class="k">await</span> _clientes.<span class="m">ValidarKyc</span>(cmd.ClienteId);
-        <span class="k">if</span> (!kycOk) <span class="k">return</span> <span class="t">Result</span>.<span class="m">Failure</span>(<span class="s">"Cliente no validado KYC"</span>);
-        <span class="c">// ... continúa el pago</span>
+    <h3>Implementación Profesional en .NET 8</h3>
+    <p>Utilizamos el sistema de tipos de C# para forzar el encapsulamiento. El proyecto <code>Contracts</code> es lo único que otros módulos pueden "ver".</p>
+
+    <div class="card-grid cols-2">
+        <div class="card">
+            <h4>1. El Contrato (Módulo Cuentas)</h4>
+            <pre style="background:transparent; padding:0; font-size:12px;"><code>// En IBS.Modules.Accounts.Shared
+public interface IAccountsModule {
+    Task&lt;bool&gt; HasEnoughFunds(
+        Guid accountId, 
+        decimal amount);
+}</code></pre>
+            <p style="font-size: 11px; color: var(--muted);">Este proyecto no tiene lógica, solo interfaces y DTOs.</p>
+        </div>
+        <div class="card accent-blue">
+            <h4>2. El Consumidor (Módulo Préstamos)</h4>
+            <pre style="background:transparent; padding:0; font-size:12px;"><code>public class LoanService(
+    IAccountsModule accounts) {
+    
+    public async Task Process() {
+        // Llamada síncrona:
+        // Bloquea hasta recibir respuesta
+        var ok = await accounts.HasEnoughFunds(...);
+        if(!ok) throw new Exception();
     }
-}
-</code></pre>
+}</code></pre>
+        </div>
+    </div>
 
-  <h3>¿Cuándo usar llamadas síncronas?</h3>
-  <div class="card-grid cols-2">
-    <div class="card accent-green">
-      <h4>✅ Úsala cuando:</h4>
-      <p>• Necesitás la respuesta para continuar<br>• Es una validación de negocio (KYC, límites)<br>• El tiempo de espera es mínimo y predecible<br>• La consistencia inmediata es requerida</p>
+    <h3>Análisis de Riesgos: El "Afecto Dominó"</h3>
+    <p>Como profesionales, debemos saber que abusar de llamadas síncronas crea un sistema frágil. Si el <em>Módulo B</em> se vuelve lento, el <em>Módulo A</em> también se vuelve lento.</p>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Escenario</th>
+                    <th>¿Síncrono o Asíncrono?</th>
+                    <th>Razón Técnica</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Validar si un DNI existe en <em>Clientes</em>.</td>
+                    <td class="status-good">Síncrono</td>
+                    <td>Necesitas el dato YA para crear la cuenta.</td>
+                </tr>
+                <tr>
+                    <td>Verificar saldo para un retiro.</td>
+                    <td class="status-good">Síncrono</td>
+                    <td>Evita el doble gasto (Consistencia inmediata).</td>
+                </tr>
+                <tr>
+                    <td>Notificar por Email un pago exitoso.</td>
+                    <td class="status-bad">Asíncrono</td>
+                    <td>Si el servidor de Mail falla, el pago debe seguir.</td>
+                </tr>
+                <tr>
+                    <td>Generar el asiento contable.</td>
+                    <td class="status-bad">Asíncrono</td>
+                    <td>La contabilidad puede ocurrir milisegundos después.</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-    <div class="card" style="border-color:rgba(248,113,113,.3)">
-      <h4>❌ Evítala cuando:</h4>
-      <p>• El módulo destino puede estar lento o caído<br>• La operación puede hacerse después<br>• Genera acoplamiento temporal<br>• Impacta en escalabilidad</p>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Regla de Oro en IBS:</strong> Si el flujo puede continuar aunque la otra parte falle o demore, usa <strong>Asincronismo (Eventos)</strong>. Si el flujo NO PUEDE seguir sin la respuesta (porque es una validación crítica), usa <strong>Sincronismo (Fachadas)</strong>.
+        </div>
     </div>
-  </div>
+
+    <div class="card accent-purple">
+        <h4>Consideración de Performance (Threading)</h4>
+        <p style="font-size: 14px;">En .NET 8, todas nuestras llamadas síncronas entre módulos <strong>DEBEN SER ASÍNCRONAS EN C#</strong> (usando <code>Task</code> y <code>await</code>). Esto evita el bloqueo de hilos (thread starvation) y permite que el servidor procese miles de transacciones concurrentes aunque los módulos se llamen entre sí.</p>
+    </div>
 </section>
