@@ -1,96 +1,102 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 8. DDD PRÁCTICO -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="ddd">
-  <span class="section-number">// 08</span>
-  <h2 class="section-title">DDD Práctico</h2>
-  <p class="section-subtitle">Domain-Driven Design — el lenguaje para modelar el dominio bancario</p>
+    <span class="section-number">// 08</span>
+    <h2 class="section-title">DDD Práctico</h2>
+    <p class="section-subtitle">Modelando el negocio bancario en el código, no en la base de datos.</p>
 
-  <p>DDD (Eric Evans, 2003) es un enfoque de diseño que pone el <strong>modelo de dominio en el centro</strong>. El código habla el mismo idioma que el negocio.</p>
+    <p>DDD es un enfoque donde el <strong>Lenguaje Ubicuo</strong> manda. Si un analista bancario habla de "Sobregiro", el código debe tener una clase o método que diga <code>Sobregiro</code>. Pasamos de pensar en tablas a pensar en comportamientos.</p>
 
-  <h3>Bloques de Construcción</h3>
+    <h3>Bloques de Construcción (Building Blocks)</h3>
+    <p>Para nivelar el conocimiento, dividimos el dominio en estos conceptos fundamentales:</p>
 
-  <div class="card-grid cols-2">
-    <div class="card accent-purple">
-      <h4>🏛️ Entity (Entidad)</h4>
-      <p>Objeto con <strong>identidad única</strong> que persiste en el tiempo. Ej: <span class="ic">Cuenta</span>, <span class="ic">Cliente</span>, <span class="ic">Transferencia</span>. Dos cuentas con distinto ID son objetos distintos aunque tengan el mismo saldo.</p>
+    <div class="card-grid cols-2">
+        <div class="card accent-purple">
+            <h4>🏛️ Entity (Entidad)</h4>
+            <p>Objetos que tienen una <strong>identidad</strong> que no cambia. <br><strong>Ejemplo:</strong> Un <code>Cliente</code>. Aunque cambie su nombre, dirección o teléfono, sigue siendo el mismo cliente con el mismo ID.</p>
+        </div>
+        <div class="card accent-blue">
+            <h4>💎 Value Object (Objeto Valor)</h4>
+            <p>Objetos definidos por sus <strong>atributos</strong>. No tienen ID y son inmutables. <br><strong>Ejemplo:</strong> <code>Dinero(100, "USD")</code>. Si cambias el 100 por 200, es otro objeto distinto. No "editas" el dinero, lo reemplazas.</p>
+        </div>
+        <div class="card accent-green">
+            <h4>🫙 Aggregate (Agregado)</h4>
+            <p>Es una "frontera" de consistencia. Un grupo de objetos que se tratan como una unidad. <br><strong>Ejemplo:</strong> <code>CuentaCorriente</code> es la raíz. Sus <code>Movimientos</code> pertenecen a ella. No puedes modificar un movimiento sin pasar por la Cuenta.</p>
+        </div>
+        <div class="card accent-orange">
+            <h4>⚙️ Domain Service</h4>
+            <p>Lógica de negocio que <strong>no cabe</strong> en una sola entidad. <br><strong>Ejemplo:</strong> Un <code>ConversorDivisas</code>. No es responsabilidad de la Moneda ni de la Cuenta, es un servicio externo del dominio.</p>
+        </div>
     </div>
-    <div class="card accent-blue">
-      <h4>💎 Value Object</h4>
-      <p>Objeto definido por sus <strong>atributos, sin identidad</strong>. Son inmutables. Ej: <span class="ic">Money</span>, <span class="ic">IBAN</span>, <span class="ic">Periodo</span>. Dos Money(100, ARS) son iguales e intercambiables.</p>
+
+    
+
+    <h3>¿Dónde pongo mi código? (Diferencia de Servicios)</h3>
+    <p>Esta es la duda más común. Aquí la regla clara para IBS:</p>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Característica</th>
+                    <th>Application Service</th>
+                    <th>Domain Service</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Responsabilidad</strong></td>
+                    <td>Orquesta el flujo (Tarea técnica).</td>
+                    <td>Calcula reglas (Tarea de negocio).</td>
+                </tr>
+                <tr>
+                    <td><strong>Dependencias</strong></td>
+                    <td>Llama a Repositorios, APIs, Mail.</td>
+                    <td>Solo usa Entidades y Value Objects.</td>
+                </tr>
+                <tr>
+                    <td><strong>Ejemplo IBS</strong></td>
+                    <td><code>AbrirCuentaUseCase</code></td>
+                    <td><code>CalculadorInteresCompuesto</code></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-    <div class="card accent-green">
-      <h4>🫙 Aggregate</h4>
-      <p>Grupo de entidades que forman una <strong>unidad de consistencia</strong>. Solo se accede desde la raíz (Aggregate Root). Ej: <span class="ic">CuentaCorriente</span> con sus movimientos.</p>
+
+    <h3>Ejemplo en Código: Módulo de Cuentas</h3>
+    <p>Fíjate cómo el código expresa reglas de negocio sin mencionar la base de datos:</p>
+
+    <pre style="background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6;">
+<span style="color: #6a9955;">// VALUE OBJECT: Inmutable y seguro</span>
+<span style="color: #569cd6;">public record</span> <span style="color: #4ec9b0;">Saldo</span>(<span style="color: #b5cea8;">decimal</span> Monto, <span style="color: #4ec9b0;">string</span> Moneda) {
+    <span style="color: #569cd6;">public</span> <span style="color: #4ec9b0;">Saldo</span> Sumar(<span style="color: #4ec9b0;">Saldo</span> otro) {
+        <span style="color: #569cd6;">if</span> (Moneda != otro.Moneda) <span style="color: #569cd6;">throw new</span> <span style="color: #4ec9b0;">Exception</span>(<span style="color: #ce9178;">"Monedas distintas"</span>);
+        <span style="color: #569cd6;">return new</span> <span style="color: #4ec9b0;">Saldo</span>(Monto + otro.Monto, Moneda);
+    }
+}
+
+<span style="color: #6a9955;">// ENTIDAD / AGGREGATE ROOT</span>
+<span style="color: #569cd6;">public class</span> <span style="color: #4ec9b0;">CuentaCorriente</span> {
+    <span style="color: #569cd6;">public</span> <span style="color: #4ec9b0;">Guid</span> Id { <span style="color: #569cd6;">get</span>; }
+    <span style="color: #569cd6;">public</span> <span style="color: #4ec9b0;">Saldo</span> SaldoActual { <span style="color: #569cd6;">get</span>; <span style="color: #569cd6;">private set</span>; }
+
+    <span style="color: #569cd6;">public void</span> <span style="color: #dcdcaa;">AplicarDebito</span>(<span style="color: #4ec9b0;">Saldo</span> debito) {
+        <span style="color: #6a9955;">// La regla de negocio vive AQUÍ, no en un Store Procedure</span>
+        <span style="color: #569cd6;">if</span> (SaldoActual.Monto < debito.Monto) 
+            <span style="color: #569cd6;">throw new</span> <span style="color: #4ec9b0;">SaldoInsuficienteException</span>();
+        
+        SaldoActual = <span style="color: #569cd6;">new</span> <span style="color: #4ec9b0;">Saldo</span>(SaldoActual.Monto - debito.Monto, SaldoActual.Moneda);
+    }
+}
+    </pre>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>¿Por qué esto ayuda a IBS?</strong> Al sacar la lógica de los Stored Procedures y ponerla en Entidades de C#, podemos escribir <strong>Tests Unitarios</strong>. Podemos probar 1,000 escenarios de intereses o comisiones en 2 segundos sin siquiera prender la base de datos de Sybase.
+        </div>
     </div>
-    <div class="card accent-orange">
-      <h4>⚙️ Domain Service</h4>
-      <p>Operaciones de dominio que <strong>no pertenecen naturalmente a una entidad</strong>. Ej: <span class="ic">CalculadoraIntereses</span>, <span class="ic">ValidadorLimitePagos</span>.</p>
-    </div>
+
     <div class="card accent-pink">
-      <h4>📡 Domain Event</h4>
-      <p>Algo que <strong>ocurrió en el dominio</strong> y otros módulos pueden necesitar saber. Ej: <span class="ic">CuentaAbierta</span>, <span class="ic">TransferenciaEjecutada</span>, <span class="ic">PrestamoAprobado</span>.</p>
+        <h4>📡 Domain Events: El pegamento del sistema</h4>
+        <p>Cuando algo importante pasa en el dominio (ej: <code>PrestamoAprobado</code>), la entidad dispara un evento. Otros módulos pueden "escuchar" ese evento para, por ejemplo, enviar un mail o generar un asiento contable, sin que el módulo de Préstamos sepa quién lo escucha.</p>
     </div>
-    <div class="card">
-      <h4>🗄️ Repository</h4>
-      <p><strong>Interfaz</strong> para persistir y recuperar Aggregates. El Dominio define qué necesita; la Infraestructura implementa cómo.</p>
-    </div>
-  </div>
-
-  <h3>Application Service vs Domain Service</h3>
-  <div class="table-wrap">
-    <table>
-      <tr><th></th><th>Application Service</th><th>Domain Service</th></tr>
-      <tr><td><strong>Capa</strong></td><td>Aplicación</td><td>Dominio</td></tr>
-      <tr><td><strong>Conoce BD</strong></td><td>Sí (a través de repos)</td><td>No</td></tr>
-      <tr><td><strong>Contiene lógica de negocio</strong></td><td>No (solo orquesta)</td><td>Sí</td></tr>
-      <tr><td><strong>Ejemplo</strong></td><td>EjecutarTransferenciaUseCase</td><td>CalculadoraIntereses</td></tr>
-      <tr><td><strong>Llama a</strong></td><td>Domain Services, Repos</td><td>Entities, Value Objects</td></tr>
-    </table>
-  </div>
-
-  <h3>Ejemplo completo: Módulo Cuentas</h3>
-  <pre data-lang="C# — DDD"><code><span class="c">// VALUE OBJECT — inmutable, sin identidad</span>
-<span class="k">public record</span> <span class="t">Money</span>(<span class="k">decimal</span> Amount, <span class="t">Currency</span> Currency)
-{
-    <span class="k">public</span> <span class="t">Money</span> <span class="m">Add</span>(<span class="t">Money</span> other)
-    {
-        <span class="k">if</span> (Currency != other.Currency) <span class="k">throw new</span> <span class="t">InvalidOperationException</span>();
-        <span class="k">return new</span> <span class="t">Money</span>(Amount + other.Amount, Currency);
-    }
-    <span class="k">public static bool operator</span> &gt;=(<span class="t">Money</span> a, <span class="t">Money</span> b) => a.Amount >= b.Amount;
-}
-
-<span class="c">// AGGREGATE ROOT — unidad de consistencia</span>
-<span class="k">public class</span> <span class="t">CuentaCorriente</span> : <span class="t">AggregateRoot</span>&lt;<span class="t">CuentaId</span>&gt;
-{
-    <span class="k">public</span> <span class="t">ClienteId</span> Titular { <span class="k">get</span>; <span class="k">private set</span>; }
-    <span class="k">public</span> <span class="t">Money</span> Saldo { <span class="k">get</span>; <span class="k">private set</span>; }
-    <span class="k">private</span> <span class="t">List</span>&lt;<span class="t">Movimiento</span>&gt; _movimientos = <span class="k">new</span>();
-
-    <span class="c">// Lógica de negocio dentro del aggregate</span>
-    <span class="k">public void</span> <span class="m">Debitar</span>(<span class="t">Money</span> monto, <span class="k">string</span> concepto)
-    {
-        <span class="k">if</span> (Saldo < monto)
-            <span class="k">throw new</span> <span class="t">SaldoInsuficienteException</span>(Id, monto);
-        Saldo = Saldo - monto;
-        _movimientos.<span class="m">Add</span>(<span class="t">Movimiento</span>.<span class="m">Debito</span>(monto, concepto));
-        <span class="m">AddDomainEvent</span>(<span class="k">new</span> <span class="t">SaldoActualizadoEvent</span>(Id, Saldo));
-    }
-}
-
-<span class="c">// DOMAIN SERVICE — opera sobre múltiples aggregates</span>
-<span class="k">public class</span> <span class="t">ServicioTransferencia</span>
-{
-    <span class="k">public</span> <span class="t">Result</span> <span class="m">Transferir</span>(<span class="t">CuentaCorriente</span> origen, 
-                              <span class="t">CuentaCorriente</span> destino, 
-                              <span class="t">Money</span> monto)
-    {
-        origen.<span class="m">Debitar</span>(monto, <span class="s">"Transferencia saliente"</span>);
-        destino.<span class="m">Acreditar</span>(monto, <span class="s">"Transferencia entrante"</span>);
-        <span class="k">return</span> <span class="t">Result</span>.<span class="m">Success</span>();
-    }
-}
-</code></pre>
 </section>
