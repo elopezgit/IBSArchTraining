@@ -264,3 +264,114 @@
     .main { margin-left:0; padding:0 20px 60px; }
     .card-grid.cols-2,.card-grid.cols-3 { grid-template-columns:1fr; }
   }
+
+  /* DOCUMENTATION CARDS */
+.doc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.doc-card:hover {
+    background: var(--surface2);
+    border-color: var(--accent);
+    transform: translateY(-4px);
+}
+
+.doc-icon {
+    font-size: 32px;
+    background: rgba(255,255,255,0.05);
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.doc-info h4 {
+    color: var(--text);
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.doc-info p {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0;
+}
+
+.doc-tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Ajuste para el color verde que usaremos en Resilience */
+:root {
+    --accent3: #34d399; /* Verde esmeralda */
+}
+.card.accent-green {
+    border-top: 4px solid var(--accent3);
+}
+
+
+/* Estilos para las tarjetas de Documentos/PDF */
+.doc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none; /* Quita el subrayado de enlace */
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.doc-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    background: var(--surface2);
+}
+
+.doc-icon {
+    font-size: 28px;
+    background: rgba(255, 255, 255, 0.03);
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.doc-info h4 {
+    color: var(--text);
+    font-size: 14px;
+    margin: 0;
+}
+
+.doc-info p {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 2px 0 0 0;
+}
+
+.doc-tag {
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-top: 5px;
+    display: block;
+}

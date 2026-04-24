@@ -33,6 +33,10 @@
   <a class="nav-item" href="#observability"><span class="nav-dot" style="background:#4f9cf9"></span>15. Observabilidad</a>
   <a class="nav-item" href="#security"><span class="nav-dot" style="background:#a78bfa"></span>16. Seguridad</a>
   <a class="nav-item" href="#testing"><span class="nav-dot" style="background:#34d399"></span>17. Testing</a>
+  <div class="nav-section">Avanzado</div>
+<a class="nav-item" href="#resilience"><span class="nav-dot" style="background:#34d399"></span>14. Resiliencia</a>
+<a class="nav-item" href="#testing"><span class="nav-dot" style="background:#4f9cf9"></span>15. Testing</a>
+<a class="nav-item" href="#docs"><span class="nav-dot" style="background:#f472b6"></span>18. Documentación</a>
 </nav>
 
 <!-- MAIN CONTENT -->
@@ -1478,6 +1482,75 @@ builder.Services.<span class="m">AddAuthorization</span>(options =>
 </pre>
   </div>
 
+</section>
+
+<section class="section" id="resilience">
+    <span class="section-number">// 14</span>
+    <h2 class="section-title">Resiliencia y Estabilidad</h2>
+    <p>Estrategias críticas para asegurar que el IBS no falle ante errores de terceros o alta carga.</p>
+    
+    <div class="card-grid cols-3">
+        <div class="card accent-blue">
+            <h4>Retry Pattern</h4>
+            <p>Reintenta operaciones fallidas transitorias (ej. timeout de red) con <em>Exponential Backoff</em>.</p>
+        </div>
+        <div class="card accent-purple">
+            <h4>Circuit Breaker</h4>
+            <p>Evita llamadas a servicios caídos para no saturar el sistema y permitir la recuperación.</p>
+        </div>
+        <div class="card accent-green">
+            <h4>Idempotencia</h4>
+            <p>Garantiza que procesar la misma transacción dos veces no duplique los saldos.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="testing">
+    <span class="section-number">// 15</span>
+    <h2 class="section-title">Estrategia de Testing</h2>
+    <p>Calidad de software basada en la pirámide de automatización.</p>
+    
+    <div class="layers">
+        <div class="layer" style="background:rgba(52, 211, 153, 0.1); border:1px solid var(--accent3);">
+            <span>🧪 Unit Tests</span> <span>Lógica de Dominio (XUnit)</span>
+        </div>
+        <div class="layer" style="background:rgba(167, 139, 250, 0.1); border:1px solid var(--accent2);">
+            <span>🔗 Integration Tests</span> <span>Repositorios y APIs (TestContainers)</span>
+        </div>
+        <div class="layer" style="background:rgba(79, 156, 249, 0.1); border:1px solid var(--accent);">
+            <span>📐 ArchTests</span> <span>Reglas de Arquitectura (NetArchTest)</span>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="docs">
+    <span class="section-number">// 18</span>
+    <h2 class="section-title">Documentación Técnica</h2>
+    <p>Recursos descargables y guías detalladas del proyecto IBS.</p>
+
+    <div class="card-grid cols-3" id="doc-container">
+        
+        <a href="assets/doc/0-From Dev to Architect.pdf" target="_blank" class="doc-card">
+            <div class="doc-icon">📕</div>
+            <div class="doc-info">
+                <h4>From Dev to Architect</h4>
+                <p>0-From Dev to Architect.pdf</p>
+                <span class="doc-tag">PDF · Descargar</span>
+            </div>
+        </a>
+
+        <a href="assets/doc/0-From_Dev_to_Architect_presentacion.pdf" target="_blank" class="doc-card">
+            <div class="doc-icon">📘</div>
+            <div class="doc-info">
+                <h4>0-From_Dev_to_Architect_presentacion.pdf</h4>
+                <p>0-From_Dev_to_Architect_presentacion.pdf</p>
+                <span class="doc-tag">PDF · Descargar</span>
+            </div>
+        </a>
+
+
+  
+        </div>
 </section>
 
 <!-- FOOTER -->
