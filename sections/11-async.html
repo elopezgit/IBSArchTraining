@@ -1,84 +1,91 @@
-
-<!-- ══════════════════════════════════════════ -->
-<!-- 11. LLAMADAS ASÍNCRONAS -->
-<!-- ══════════════════════════════════════════ -->
 <section class="section" id="async">
-  <span class="section-number">// 11</span>
-  <h2 class="section-title">Integración Asíncrona — Colas y Eventos</h2>
-  <p class="section-subtitle">Event-Driven Architecture dentro del monolito modular</p>
+    <span class="section-number">// 11</span>
+    <h2 class="section-title">Integración Asíncrona — Colas y Eventos</h2>
+    <p class="section-subtitle">Arquitectura dirigida por eventos (EDA): Desacoplando el tiempo y el espacio.</p>
 
-  <h3>Comunicación Asíncrona</h3>
-  <p>El módulo publicador <strong>no espera respuesta</strong>. Publica un mensaje/evento y continúa. Los suscriptores reaccionan cuando pueden.</p>
+    <p>En el IBS moderno, la asincronía es nuestra herramienta para la <strong>Escalabilidad</strong>. El módulo emisor dispara un evento al viento (Event Bus) y se olvida. No le importa quién lo escucha ni cuánto tardan en procesarlo. Esto elimina el acoplamiento temporal.</p>
 
-  <div class="diagram">
-    <div class="diagram-title">Event-Driven — Transferencia ejecutada notifica Contabilidad</div>
-    <pre class="ascii">
-Módulo Pagos          Event Bus          Módulo Contabilidad
-     │                   │                      │
-     │ ejecuta pago       │                      │
-     │──TransferenciaEjec►│                      │
-     │ (continúa)         │                      │
-     │                    │──TransferenciaEjec──►│
-     │                    │                      │ registra asientos
-     │                    │                      │ GL independiente
-</pre>
-  </div>
+    
 
-  <h3>Tipos de Comunicación Asíncrona</h3>
-  <div class="card-grid cols-2">
-    <div class="card accent-blue">
-      <h4>📨 Cola (Queue)</h4>
-      <p><strong>Point-to-point.</strong> Un productor, un consumidor. Cada mensaje es procesado por exactamente un receptor. Ideal para comandos: "Procesar esta transferencia".</p>
+    <h3>Diferencias Críticas para el Diseño</h3>
+    <div class="card-grid cols-2">
+        <div class="card accent-blue">
+            <h4>📨 Comandos (Queues)</h4>
+            <p><strong>Intención:</strong> "Haz algo por mí". <br><strong>Receptor:</strong> Uno solo (Point-to-point). <br><strong>Ejemplo:</strong> <code>GenerarResumenMensualCmd</code>. Es una orden directa que debe ejecutarse una vez.</p>
+        </div>
+        <div class="card accent-purple">
+            <h4>📡 Eventos (Pub/Sub)</h4>
+            <p><strong>Intención:</strong> "Algo ya pasó". <br><strong>Receptor:</strong> Muchos (Broadcast). <br><strong>Ejemplo:</strong> <code>PagoRecibidoEvent</code>. Notifica a Contabilidad, a la App Mobile y al área de Prevención de Fraude simultáneamente.</p>
+        </div>
     </div>
-    <div class="card accent-purple">
-      <h4>📡 Topic / Event</h4>
-      <p><strong>Pub/Sub.</strong> Un productor, múltiples consumidores. Todos los interesados reciben la copia. Ideal para eventos: "TransferenciaEjecutada" → notifica Contabilidad, Notificaciones, Reportes.</p>
+
+    <h3>Garantía Bancaria: El Patrón Outbox</h3>
+    <p>En un banco, no podemos permitir que un pago se guarde en la BD pero el evento de "Notificación" nunca se envíe porque el Event Bus estaba caído. Usamos la <strong>Tabla Outbox</strong> para garantizar la consistencia eventual.</p>
+
+    <div class="card accent-orange">
+        <ol style="font-size: 14px;">
+            <li>1. En la <strong>misma transacción</strong> SQL se guarda el Pago y el Evento en una tabla <code>Outbox</code>.</li>
+            <li>2. Un proceso en segundo plano (Worker) lee la tabla y publica en el Bus.</li>
+            <li>3. Si el Bus falla, el mensaje sigue en la DB para reintentar. <strong>Cero pérdida de datos.</strong></li>
+        </ol>
     </div>
-  </div>
 
-  <h3>Implementación en .NET (MediatR + eventos de dominio)</h3>
-  <pre data-lang="C# — Events"><code><span class="c">// 1. Definir el Domain Event</span>
-<span class="k">public record</span> <span class="t">TransferenciaEjecutadaEvent</span>(
-    <span class="t">TransferenciaId</span> Id,
-    <span class="t">Money</span> Monto,
-    <span class="t">CuentaId</span> Origen,
-    <span class="t">CuentaId</span> Destino,
-    <span class="t">DateTime</span> FechaEjecucion
-) : <span class="t">IDomainEvent</span>;
+    <h3>Implementación con MediatR y C# 12</h3>
+    <p>Usamos <code>records</code> para los eventos por su inmutabilidad nativa y facilidad de transporte.</p>
 
-<span class="c">// 2. Publicar desde el Aggregate Root (automático al guardar)</span>
-<span class="k">public class</span> <span class="t">CuentaCorriente</span> : <span class="t">AggregateRoot</span>
-{
-    <span class="k">public void</span> <span class="m">Debitar</span>(<span class="t">Money</span> monto)
-    {
-        <span class="c">// ... lógica</span>
-        <span class="m">AddDomainEvent</span>(<span class="k">new</span> <span class="t">TransferenciaEjecutadaEvent</span>(...));
+    <div class="card">
+        <pre style="background:transparent; padding:0; font-size:13px;"><code><span style="color: #6a9955;">// 1. Definición del Evento (Dato puro e inmutable)</span>
+public record PagoExitosoEvent(Guid PagoId, decimal Monto) : INotification;
+
+<span style="color: #6a9955;">// 2. Publicador (En el Módulo de Pagos)</span>
+public class PagoService(IMediator bus) {
+    public async Task Finalizar(Guid id) {
+        // ... lógica de persistencia
+        await bus.Publish(new PagoExitosoEvent(id, 1500.00m));
     }
 }
 
-<span class="c">// 3. Handler en Contabilidad — reacciona al evento</span>
-<span class="k">public class</span> <span class="t">RegistrarAsientosHandler</span>
-    : <span class="t">INotificationHandler</span>&lt;<span class="t">TransferenciaEjecutadaEvent</span>&gt;
-{
-    <span class="k">public async</span> <span class="t">Task</span> <span class="m">Handle</span>(<span class="t">TransferenciaEjecutadaEvent</span> evt,
-                             <span class="t">CancellationToken</span> ct)
-    {
-        <span class="c">// Registrar débito y crédito en GL</span>
-        <span class="k">await</span> _glService.<span class="m">RegistrarAsientos</span>(
-            <span class="m">AsientoDebito</span>(evt.Origen, evt.Monto),
-            <span class="m">AsientoCredito</span>(evt.Destino, evt.Monto)
-        );
+<span style="color: #6a9955;">// 3. Suscriptor (En el Módulo de Notificaciones)</span>
+public class NotificarUsuarioHandler : INotificationHandler&lt;PagoExitosoEvent&gt; {
+    public async Task Handle(PagoExitosoEvent ev, CancellationToken ct) {
+        // Enviar Push al celular del cliente
+        await _pushService.Send($"Recibiste un pago de {ev.Monto}");
     }
-}
-</code></pre>
+}</code></pre>
+    </div>
 
-  <h3>¿Cuándo usar cada tipo?</h3>
-  <div class="table-wrap">
-    <table>
-      <tr><th>Patrón</th><th>Cuándo</th><th>Ejemplo IBS</th></tr>
-      <tr><td>Síncrono (REST/Facade)</td><td>Necesito respuesta, validación crítica</td><td>Validar KYC antes de operar</td></tr>
-      <tr><td>Cola (Command)</td><td>Trabajo a procesar, garantía de entrega</td><td>Procesar batch de pagos</td></tr>
-      <tr><td>Evento (Pub/Sub)</td><td>Notificar cambios, múltiples interesados</td><td>CuentaAbierta → notifica Seguridad, Reportes</td></tr>
-    </table>
-  </div>
+    <h3>Cuándo elegir Asincronismo (The Trade-off)</h3>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ventaja</th>
+                    <th>Desventaja</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="status-good"><strong>Resiliencia:</strong> Si falla el módulo de mails, el pago no se cae.</td>
+                    <td class="status-bad"><strong>Complejidad:</strong> Más difícil de seguir el flujo (Debugging).</td>
+                </tr>
+                <tr>
+                    <td class="status-good"><strong>Performance:</strong> El usuario recibe el OK más rápido.</td>
+                    <td class="status-bad"><strong>Consistencia:</strong> Los datos tardan milisegundos en replicarse.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-text">
+            <strong>Concepto de Nivelación: Consistencia Eventual.</strong> 
+            A diferencia de la consistencia inmediata (síncrona), aquí aceptamos que el saldo se actualice YA, pero que el mail llegue 2 segundos después. En el 90% de los procesos bancarios (excepto el movimiento de dinero core), la consistencia eventual es suficiente y preferible.
+        </div>
+    </div>
+
+    <div class="card accent-pink">
+        <h4>Resumen para el equipo:</h4>
+        <p style="font-size: 14px;"><strong>Síncrono</strong> para leer datos críticos o validar. <strong>Asíncrono</strong> para reaccionar a cambios o ejecutar procesos pesados en segundo plano. Esta es la clave para que el IBS no se bloquee bajo mucha carga.</p>
+    </div>
 </section>
