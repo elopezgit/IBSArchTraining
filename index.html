@@ -1621,6 +1621,13 @@ builder.Services.<span class="m">AddAuthorization</span>(options =>
                 <dt>ACID</dt>
                 <dd>Propiedad no negociable para el Core Bancario: Atomicidad, Consistencia, Aislamiento y Durabilidad.</dd>
 
+                <ul>
+                    <li><strong>Atomicidad:</strong> La transacción es indivisible; se completa totalmente o se revierte íntegramente ante cualquier error.</li>
+                    <li><strong>Consistencia:</strong> Asegura que la transacción lleve la base de datos de un estado válido a otro, cumpliendo todas las reglas de integridad bancaria.</li>
+                    <li><strong>Aislamiento:</strong> Las transacciones simultáneas se ejecutan sin interferir entre sí, evitando errores de saldo o lecturas sucias.</li>
+                    <li><strong>Durabilidad:</strong> Una vez confirmada, la transacción persiste de forma permanente, incluso ante fallos críticos de hardware o energía.</li>
+                </ul>
+
                 <dt>Compensación (SAGA)</dt>
                 <dd>Acción de reversa que se ejecuta si un paso intermedio de una transacción distribuida falla.</dd>
 
