@@ -102,3 +102,19 @@ public interface IAccountsModule {
         <p style="font-size: 14px;">En .NET 8, todas nuestras llamadas síncronas entre módulos <strong>DEBEN SER ASÍNCRONAS EN C#</strong> (usando <code>Task</code> y <code>await</code>). Esto evita el bloqueo de hilos (thread starvation) y permite que el servidor procese miles de transacciones concurrentes aunque los módulos se llamen entre sí.</p>
     </div>
 </section>
+
+
+<section class="section" id="integration-sync">
+    <span class="section-number"></span>
+    <h2 class="section-title">Integración y Reglas de Oro</h2>
+    
+    <div class="card accent-red">
+        <h4>🚫 Lo que NO se permite más (Problemática entre módulos):</h4>
+        <p>Para garantizar la independencia, debemos romper con prácticas del pasado[cite: 26]:</p>
+        <ul style="font-size: 14px;">
+            <li><strong>Prohibido los JOINs entre módulos:</strong> Nunca consultes la tabla de otro módulo directamente; usa su API o eventos.</li>
+            <li><strong>No compartir lógica vía Stored Procedures:</strong> La lógica debe extraerse de la DB hacia servicios C# para ser testeable[cite: 26].</li>
+            <li><strong>Sin dependencias circulares:</strong> El módulo A puede llamar al B, pero el B no debe llamar al A para evitar el acoplamiento[cite: 26].</li>
+        </ul>
+    </div>
+</section>

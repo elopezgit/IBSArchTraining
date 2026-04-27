@@ -96,3 +96,19 @@
         <p style="font-size: 14px;"><strong>No uses <code>new</code></strong> para clases que tengan lógica de negocio o acceso a datos. Pídelas en el constructor. Deja que el contenedor de .NET haga el trabajo sucio por ti.</p>
     </div>
 </section>
+
+<section class="section" id="dependency-injection">
+ 
+    <h2 class="section-title">Inyección de Dependencias y Capas</h2>
+    <p>Es el pegamento que permite la independencia entre la lógica de negocio y la tecnología[cite: 13]. Cada módulo se organiza en capas (Onion Architecture)[cite: 10]:</p>
+    
+    <ul>
+        <li><strong>Domain:</strong> El corazón del módulo; contiene entidades y reglas de negocio sin dependencias externas[cite: 17, 18].</li>
+        <li><strong>Application:</strong> Orquestador de casos de uso; aquí se definen las interfaces[cite: 12, 18].</li>
+        <li><strong>Infrastructure:</strong> Implementaciones técnicas (Acceso a Sybase, Clientes API, Colas)[cite: 10].</li>
+    </ul>
+
+    <div class="callout tip">
+        <p><strong>Beneficio:</strong> La capa de Aplicación pide una interfaz (ej. <code>ICuentaRepository</code>) y .NET 8 inyecta la implementación de Infraestructura, permitiendo cambiar la base de datos sin tocar la lógica de negocio[cite: 13].</p>
+    </div>
+</section>
