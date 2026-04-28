@@ -8,6 +8,8 @@
     <p>Si alguien cree haber encontrado una solución que no tiene desventajas, es muy probable que aún no las haya identificado. <strong>No existen las "mejores prácticas", solo existen los trade-offs.</strong></p>
   </div>
 
+  <!-- ===================== EJEMPLO PRINCIPAL ===================== -->
+
   <h3>Ejemplo Core: ¿SAGAs o Transacciones Distribuidas?</h3>
   <p>En la modernización de IBS, la integridad de los datos es sagrada. Pero cómo la logramos define la agilidad del sistema.</p>
 
@@ -26,7 +28,82 @@
     </div>
   </div>
 
-  
+  <!-- ===================== ADR ===================== -->
+
+  <h3>Registro de Decisión (ADR)</h3>
+  <p>Toda decisión relevante debe quedar documentada. Esto evita discusiones futuras y permite entender el "por qué" de la arquitectura.</p>
+
+  <div class="card">
+    <h4>Ejemplo ADR: Uso de SAGA</h4>
+    <pre><code>ADR-003: Uso de SAGA para transacciones distribuidas
+
+Estado: Aceptado
+
+Contexto:
+El sistema requiere alta disponibilidad y desacoplamiento entre servicios.
+
+Opciones evaluadas:
+- SAGA
+- 2PC
+
+Decisión:
+Se adopta SAGA.
+
+Trade-offs:
++ Mayor resiliencia
++ Mejor escalabilidad
+- Consistencia eventual
+- Complejidad en compensaciones
+
+Consecuencias:
+Se implementarán mecanismos de compensación y monitoreo.</code></pre>
+  </div>
+
+  <!-- ===================== ATAM ===================== -->
+
+  <h3>Análisis ATAM (Atributos de Calidad)</h3>
+  <p>Evaluamos cada decisión en función de atributos de calidad del sistema.</p>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Atributo</th>
+          <th>SAGA</th>
+          <th>2PC</th>
+          <th>Impacto</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Disponibilidad</td>
+          <td>Alta</td>
+          <td>Baja</td>
+          <td>SAGA evita bloqueos globales</td>
+        </tr>
+        <tr>
+          <td>Consistencia</td>
+          <td>Eventual</td>
+          <td>Fuerte</td>
+          <td>2PC garantiza ACID</td>
+        </tr>
+        <tr>
+          <td>Escalabilidad</td>
+          <td>Alta</td>
+          <td>Baja</td>
+          <td>2PC no escala bien</td>
+        </tr>
+        <tr>
+          <td>Complejidad</td>
+          <td>Alta</td>
+          <td>Media</td>
+          <td>SAGA requiere compensaciones</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== MATRIZ ===================== -->
 
   <h3>Matriz de Decisión: Monolito vs. Microservicios</h3>
   <p>Un trade-off clásico que evaluamos para el diseño del <strong>Monolito Modular</strong> de IBS:</p>
@@ -44,57 +121,81 @@
       <tbody>
         <tr>
           <td><strong>Costo de Despliegue</strong></td>
-          <td>Bajo (Una unidad)</td>
-          <td>Alto (Infra compleja)</td>
+          <td>Bajo</td>
+          <td>Alto</td>
           <td>Monolito</td>
         </tr>
         <tr>
-          <td><strong>Aislamiento de Errores</strong></td>
+          <td><strong>Aislamiento</strong></td>
           <td>Medio</td>
-          <td>Máximo</td>
+          <td>Alto</td>
           <td>Microservicios</td>
         </tr>
         <tr>
-          <td><strong>Facilidad de Testeo</strong></td>
-          <td>Alta</td>
-          <td>Baja (E2E complejo)</td>
+          <td><strong>Testing</strong></td>
+          <td>Simple</td>
+          <td>Complejo</td>
           <td>Monolito</td>
         </tr>
         <tr>
           <td><strong>Escalabilidad</strong></td>
-          <td>Por instancia</td>
-          <td>Por servicio</td>
+          <td>Media</td>
+          <td>Alta</td>
           <td>Microservicios</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <h3>Framework de Análisis (Head First SA)</h3>
-  <p>Para cualquier decisión técnica en el proyecto, evaluamos estas tres dimensiones:</p>
+  <!-- ===================== C4 ===================== -->
+
+  <h3>Relación con Arquitectura (C4 Model)</h3>
+  <p>
+    El modelo :contentReference[oaicite:0]{index=0} nos permite visualizar la arquitectura,
+    mientras que los ADR explican las decisiones detrás de esa estructura.
+  </p>
+
+  <div class="card-grid cols-2">
+    <div class="card">
+      <h4>C4 Model</h4>
+      <p>Define cómo está construido el sistema (APIs, DB, servicios).</p>
+    </div>
+    <div class="card">
+      <h4>ADR</h4>
+      <p>Explica por qué se eligió esa arquitectura y qué trade-offs se aceptaron.</p>
+    </div>
+  </div>
+
+  <!-- ===================== FRAMEWORK ===================== -->
+
+  <h3>Framework de Análisis</h3>
+  <p>Antes de tomar cualquier decisión arquitectónica, evaluamos:</p>
 
   <div class="card-grid cols-3">
     <div class="card">
       <div class="card-icon">🎯</div>
-      <h4>¿Estratégico o Táctico?</h4>
-      <p>¿Afecta a todo el ciclo de vida de IBS 2026 o solo a un requerimiento puntual de un sprint?</p>
+      <h4>Estratégico vs Táctico</h4>
+      <p>¿Impacta a largo plazo o es una solución puntual?</p>
     </div>
     <div class="card">
       <div class="card-icon">⚙️</div>
       <h4>Costo del Cambio</h4>
-      <p>¿Qué tan difícil será revertir esta decisión en 2 años? Si el costo es prohibitivo, es una decisión de arquitectura.</p>
+      <p>¿Qué tan difícil será revertir esta decisión?</p>
     </div>
     <div class="card">
       <div class="card-icon">⚖️</div>
       <h4>Impacto Cruzado</h4>
-      <p>¿Mejorar la seguridad aquí degradará la latencia percibida por el usuario (P95)?</p>
+      <p>¿Qué atributo mejora y cuál empeora?</p>
     </div>
   </div>
+
+  <!-- ===================== CIERRE ===================== -->
 
   <div class="callout tip">
     <div class="callout-icon">💡</div>
     <div class="callout-text">
-      <strong>ADR (Architecture Decision Record):</strong> No confíes en la memoria. Si elegimos <em>Outbox Pattern</em> sobre <em>Direct Messaging</em>, debe quedar un documento breve con el contexto y los trade-offs aceptados. El "yo del futuro" te lo agradecerá.
+      <strong>Clave:</strong> Toda decisión importante debe tener su ADR.  
+      La arquitectura no es solo diseño, es memoria técnica del sistema.
     </div>
   </div>
 </section>

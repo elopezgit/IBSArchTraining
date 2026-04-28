@@ -1,114 +1,332 @@
 <section class="section" id="quality">
   <span class="section-number">// 04</span>
   <h2 class="section-title">Atributos de Calidad</h2>
-  <p class="section-subtitle">Las "-ilities": El verdadero trabajo del arquitecto</p>
+  <p class="section-subtitle">Las "-ilities": el verdadero trabajo del arquitecto</p>
 
-  <p>En el proyecto IBS, los atributos de calidad no son deseos; son <strong>restricciones de diseño</strong>. Como dice Mark Richards: <em>"La arquitectura de software es la selección de las características más importantes del sistema antes de escribir la primera línea de código"</em>.</p>
+  <p>
+    En una arquitectura bancaria, los atributos de calidad no son detalles secundarios ni deseos generales.
+    Son <strong>restricciones reales de diseño</strong> que condicionan cada decisión técnica: cómo se separan los módulos,
+    cómo se exponen las APIs, cómo se protege la información, cómo se audita una operación y cómo se responde ante fallas.
+  </p>
+
+  <p>
+    Una funcionalidad puede estar correctamente programada desde el punto de vista del negocio, pero si no cumple con
+    seguridad, trazabilidad, disponibilidad, mantenibilidad y performance, puede transformarse en un riesgo operativo.
+    Por eso, en IBS, la arquitectura no se evalúa solamente preguntando:
+    <strong>“¿funciona?”</strong>, sino también:
+    <strong>“¿funciona de forma segura, mantenible, auditable y escalable?”</strong>
+  </p>
 
   <div class="card accent-blue" style="margin-bottom: 30px;">
-    <h4>El Catálogo de Características Arquitectónicas</h4>
-    <p>Hemos priorizado estos 6 atributos basándonos en el perfil de riesgo bancario de IBS:</p>
+    <h4>Idea central</h4>
+    <p>
+      Los atributos de calidad son las características que definen qué tan confiable, seguro, mantenible y preparado
+      está un sistema para operar en escenarios reales. En sistemas bancarios, muchas veces estos atributos pesan más
+      que la propia funcionalidad visible para el usuario.
+    </p>
   </div>
+
+  <h3>Principales atributos priorizados para IBS</h3>
 
   <div class="card-grid cols-3">
     <div class="card accent-blue">
       <div class="card-icon">⚡</div>
       <h4>Performance</h4>
-      <p>No es solo "velocidad". En IBS medimos <strong>Latencia</strong> (tiempo de respuesta) y <strong>Throughput</strong> (operaciones/seg). <br><strong>Meta:</strong> p95 < 500ms en transacciones de Core.</p>
+      <p>
+        No significa simplemente que el sistema sea “rápido”. En arquitectura se analiza mediante métricas concretas:
+        <strong>latencia</strong>, <strong>tiempo de respuesta</strong>, <strong>throughput</strong> y consumo de recursos.
+      </p>
+      <p>
+        En .NET, esto implica cuidar consultas a base de datos, llamadas HTTP, serialización JSON, uso de memoria,
+        logs excesivos y operaciones bloqueantes.
+      </p>
+      <div class="badge badge-blue">Ejemplo: p95 menor a 500ms</div>
     </div>
+
     <div class="card accent-green">
       <div class="card-icon">🔄</div>
       <h4>Disponibilidad</h4>
-      <p>Capacidad de operar ante fallas. Apuntamos a "Tres Nueves" (99.9%). Requiere redundancia y mecanismos de <em>failover</em> automáticos.</p>
+      <p>
+        Es la capacidad del sistema de seguir operando incluso cuando algo falla. No se trata de evitar todas las fallas,
+        sino de diseñar el sistema para tolerarlas.
+      </p>
+      <p>
+        En .NET puede trabajarse con health checks, retry policies, circuit breakers, balanceo de carga,
+        monitoreo y despliegues controlados.
+      </p>
+      <div class="badge badge-green">Objetivo: reducir indisponibilidad</div>
     </div>
+
     <div class="card accent-purple">
       <div class="card-icon">📈</div>
       <h4>Escalabilidad</h4>
-      <p>Capacidad de manejar carga. En el Monolito Modular de IBS, escalamos <strong>Verticalmente</strong> (más recursos) y <strong>Horizontalmente</strong> (más instancias del monolito).</p>
+      <p>
+        Es la capacidad del sistema para soportar crecimiento sostenido de usuarios, operaciones o volumen de datos
+        sin degradarse de forma crítica.
+      </p>
+      <p>
+        En un monolito modular con .NET, se puede escalar verticalmente aumentando recursos del servidor,
+        u horizontalmente desplegando más instancias detrás de un balanceador.
+      </p>
+      <div class="badge badge-purple">Clave: diseño modular</div>
     </div>
+
     <div class="card accent-orange">
       <div class="card-icon">🔒</div>
-      <h4>Seguridad / Audit</h4>
-      <p>Integridad de datos y trazabilidad. Cada cambio de saldo debe tener un <strong>Audit Trail</strong> inmutable. Seguridad por diseño (Zero Trust).</p>
+      <h4>Seguridad y Auditoría</h4>
+      <p>
+        En sistemas bancarios, la seguridad no puede agregarse al final. Debe estar presente desde el diseño:
+        autenticación, autorización, validación de datos, trazabilidad, cifrado y control de accesos.
+      </p>
+      <p>
+        Cada operación sensible debe dejar una huella auditable: quién la hizo, cuándo, desde dónde,
+        con qué datos y cuál fue el resultado.
+      </p>
+      <div class="badge badge-orange">Prioridad crítica</div>
     </div>
+
     <div class="card accent-pink">
       <div class="card-icon">🔧</div>
       <h4>Mantenibilidad</h4>
-      <p>Bajo acoplamiento y alta cohesión. Medimos esto mediante la <strong>Complejidad Ciclomática</strong> y la separación de capas en .NET.</p>
+      <p>
+        Un sistema mantenible permite modificar, extender y corregir funcionalidades sin romper otras partes.
+        Esto depende del bajo acoplamiento, alta cohesión, separación de responsabilidades y claridad del código.
+      </p>
+      <p>
+        En .NET se refleja en una buena separación entre Controllers, Services, Repositories, DTOs,
+        validadores, clientes externos y capa de dominio.
+      </p>
+      <div class="badge badge-pink">Menos deuda técnica</div>
     </div>
+
     <div class="card">
       <div class="card-icon">🧪</div>
       <h4>Testability</h4>
-      <p>Facilidad de validar cambios. Crucial para la migración IBS: sin tests automatizados, el riesgo de regresión bancaria es inaceptable.</p>
+      <p>
+        Es la facilidad para probar el sistema de forma automática o controlada. En una modernización bancaria,
+        la testabilidad reduce el riesgo de regresiones.
+      </p>
+      <p>
+        En .NET conviene diseñar servicios desacoplados mediante interfaces, inyección de dependencias,
+        pruebas unitarias, pruebas de integración y mocks para APIs externas.
+      </p>
+      <div class="badge badge-blue">Clave para migraciones</div>
     </div>
   </div>
 
-  <h3>Escalabilidad vs Elasticidad — El enfoque de Kleppmann</h3>
-  <p>Es vital no confundir estos términos al diseñar la infraestructura en la nube para IBS:</p>
+  <h3>Ejemplo aplicado en .NET</h3>
+
+  <p>
+    Supongamos una API bancaria desarrollada en .NET que expone una operación transaccional.
+    El objetivo no es solamente que el endpoint responda correctamente, sino que cumpla varios atributos al mismo tiempo.
+  </p>
+
+  <div class="card-grid cols-2">
+    <div class="card accent-blue">
+      <h4>Endpoint funcional pero débil</h4>
+      <pre><code>[HttpPost("operacion")]
+public IActionResult RegistrarOperacion(OperacionRequest request)
+{
+    var resultado = _service.Procesar(request);
+    return Ok(resultado);
+}</code></pre>
+      <p>
+        Este código puede funcionar, pero todavía no expresa claramente validaciones, auditoría,
+        manejo de errores, trazabilidad, seguridad ni resiliencia.
+      </p>
+    </div>
+
+    <div class="card accent-green">
+      <h4>Endpoint más alineado a calidad</h4>
+      <pre><code>[HttpPost("operacion")]
+public async Task&lt;IActionResult&gt; RegistrarOperacion(
+    [FromBody] OperacionRequest request,
+    CancellationToken cancellationToken)
+{
+    var correlationId = HttpContext.TraceIdentifier;
+
+    _logger.LogInformation(
+        "Inicio operación bancaria. CorrelationId: {CorrelationId}",
+        correlationId);
+
+    var resultado = await _operacionService.ProcesarAsync(
+        request,
+        correlationId,
+        cancellationToken);
+
+    return Ok(resultado);
+}</code></pre>
+      <p>
+        Esta versión ya incorpora asincronismo, trazabilidad, logging, cancellation token y separación
+        de responsabilidades hacia una capa de servicio.
+      </p>
+    </div>
+  </div>
+
+  <h3>Escalabilidad vs Elasticidad</h3>
+
+  <p>
+    Es importante no confundir estos conceptos. Ambos están relacionados con carga, pero responden a problemas distintos.
+  </p>
 
   <div class="card-grid cols-2">
     <div class="card">
-      <h4>📊 Escalabilidad (Planificada)</h4>
-      <p>Capacidad del sistema para manejar un <strong>incremento de carga sostenido</strong> (ej. el banco crece de 1M a 5M de clientes) sin degradar la performance.</p>
-      <div class="badge badge-blue">Enfoque: Arquitectura de Datos</div>
+      <h4>📊 Escalabilidad</h4>
+      <p>
+        Es la capacidad de crecer de manera planificada. Por ejemplo, si el banco pasa de procesar miles
+        a millones de operaciones mensuales, el sistema debe poder acompañar ese crecimiento.
+      </p>
+      <p>
+        Se resuelve con buena arquitectura, separación de módulos, optimización de base de datos,
+        diseño de APIs y capacidad de desplegar más instancias.
+      </p>
+      <div class="badge badge-blue">Crecimiento sostenido</div>
     </div>
+
     <div class="card">
-      <h4>⚡ Elasticidad (Reactiva)</h4>
-      <p>Capacidad de <strong>adquirir y liberar recursos</strong> dinámicamente ante picos de demanda (ej. Cierre de mes o Black Friday).</p>
-      <div class="badge badge-purple">Enfoque: Infraestructura / Cloud</div>
+      <h4>⚡ Elasticidad</h4>
+      <p>
+        Es la capacidad de aumentar o reducir recursos dinámicamente según la demanda.
+        Por ejemplo, más instancias durante cierre de mes o picos de pagos.
+      </p>
+      <p>
+        Se relaciona más con infraestructura, contenedores, cloud, balanceadores, monitoreo
+        y reglas automáticas de escalado.
+      </p>
+      <div class="badge badge-purple">Respuesta a picos</div>
     </div>
   </div>
 
-  
+  <h3>La matriz de conflictos</h3>
 
-  <h3>La Matriz de Conflictos (Trade-offs de Atributos)</h3>
-  <p>No se puede tener todo. Al mejorar un atributo, solemos degradar otro:</p>
+  <p>
+    En arquitectura no existe una solución perfecta. Cada mejora suele tener un costo.
+    El trabajo del arquitecto consiste en identificar esos costos y decidir conscientemente.
+  </p>
 
   <div class="table-container">
     <table class="data-table">
       <thead>
         <tr>
-          <th>Acción</th>
+          <th>Decisión Técnica</th>
           <th>Atributo Mejorado</th>
-          <th>Atributo Perjudicado</th>
-          <th>Razón Técnica</th>
+          <th>Atributo Afectado</th>
+          <th>Explicación</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Agregar Encriptación</td>
+          <td>Cifrar información sensible</td>
           <td class="status-good">Seguridad</td>
           <td class="status-bad">Performance</td>
-          <td>Uso intensivo de CPU por cada I/O.</td>
+          <td>El cifrado agrega procesamiento adicional en lectura y escritura.</td>
         </tr>
         <tr>
-          <td>Caching Agresivo</td>
+          <td>Agregar caché</td>
           <td class="status-good">Performance</td>
           <td class="status-bad">Consistencia</td>
-          <td>Riesgo de leer saldos desactualizados (Stale Data).</td>
+          <td>Puede devolver información desactualizada si no se invalida correctamente.</td>
         </tr>
         <tr>
-          <td>Redundancia de Nodos</td>
+          <td>Separar módulos</td>
+          <td class="status-good">Mantenibilidad</td>
+          <td class="status-bad">Complejidad</td>
+          <td>Mejora el orden, pero exige más disciplina en contratos e integración.</td>
+        </tr>
+        <tr>
+          <td>Agregar auditoría detallada</td>
+          <td class="status-good">Trazabilidad</td>
+          <td class="status-bad">Volumen de datos</td>
+          <td>Genera más registros y requiere políticas de almacenamiento.</td>
+        </tr>
+        <tr>
+          <td>Usar múltiples instancias</td>
           <td class="status-good">Disponibilidad</td>
-          <td class="status-bad">Costo / Complejidad</td>
-          <td>Doble infraestructura y gestión de quórum.</td>
-        </tr>
-        <tr>
-          <td>Separación en Microservicios</td>
-          <td class="status-good">Agilidad de Equipo</td>
-          <td class="status-bad">Testability E2E</td>
-          <td>Difícil de testear flujos completos por red.</td>
+          <td class="status-bad">Operación</td>
+          <td>Requiere balanceo, monitoreo y control de estado distribuido.</td>
         </tr>
       </tbody>
     </table>
   </div>
 
+  <h3>Buenas prácticas concretas para .NET</h3>
+
+  <div class="card-grid cols-2">
+    <div class="card accent-blue">
+      <h4>Para Performance</h4>
+      <ul>
+        <li>Usar métodos async/await en operaciones de I/O.</li>
+        <li>Evitar consultas innecesarias a base de datos.</li>
+        <li>Paginar respuestas grandes.</li>
+        <li>Medir tiempos con logs y métricas.</li>
+        <li>Evitar traer más columnas de las necesarias.</li>
+      </ul>
+    </div>
+
+    <div class="card accent-orange">
+      <h4>Para Seguridad</h4>
+      <ul>
+        <li>Validar siempre los datos de entrada.</li>
+        <li>No exponer errores internos al cliente.</li>
+        <li>Usar JWT, OAuth o mecanismos definidos por arquitectura.</li>
+        <li>Aplicar autorización por rol, tarea o facultad.</li>
+        <li>Registrar operaciones sensibles en auditoría.</li>
+      </ul>
+    </div>
+
+    <div class="card accent-green">
+      <h4>Para Disponibilidad</h4>
+      <ul>
+        <li>Implementar health checks.</li>
+        <li>Usar retries controlados para servicios externos.</li>
+        <li>Aplicar circuit breaker ante fallas repetidas.</li>
+        <li>Diseñar respuestas claras ante indisponibilidad parcial.</li>
+        <li>Evitar que una falla externa bloquee todo el flujo.</li>
+      </ul>
+    </div>
+
+    <div class="card accent-pink">
+      <h4>Para Mantenibilidad</h4>
+      <ul>
+        <li>Separar Controllers, Services, Repositories y DTOs.</li>
+        <li>No colocar lógica de negocio dentro del Controller.</li>
+        <li>Usar nombres claros y consistentes.</li>
+        <li>Centralizar validaciones repetidas.</li>
+        <li>Evitar métodos extensos con demasiadas responsabilidades.</li>
+      </ul>
+    </div>
+  </div>
+
   <div class="callout tip">
     <div class="callout-icon">💡</div>
     <div class="callout-text">
-      <strong>Veredicto IBS:</strong> En el sistema bancario, la jerarquía es clara: 
-      <strong>1. Seguridad/Consistencia > 2. Disponibilidad > 3. Performance.</strong> 
-      Preferimos un sistema que sea 100ms más lento pero que nunca pierda un centavo o una traza de auditoría.
+      <strong>Veredicto IBS:</strong>
+      en un sistema bancario, la jerarquía de atributos debe ser clara:
+      <strong>1. Seguridad y Consistencia</strong>,
+      <strong>2. Auditoría y Trazabilidad</strong>,
+      <strong>3. Disponibilidad</strong>,
+      <strong>4. Performance</strong>.
+      Es preferible una operación 100ms más lenta antes que una operación rápida sin trazabilidad,
+      sin control de permisos o con riesgo de inconsistencia financiera.
     </div>
+  </div>
+
+  <div class="card accent-purple" style="margin-top: 30px;">
+    <h4>Conclusión arquitectónica</h4>
+    <p>
+      Los atributos de calidad permiten transformar una solución técnica en una arquitectura confiable.
+      En IBS, cada API, módulo, integración o proceso batch debería poder responder estas preguntas:
+    </p>
+    <ul>
+      <li>¿Es seguro?</li>
+      <li>¿Es auditable?</li>
+      <li>¿Es mantenible?</li>
+      <li>¿Puede escalar?</li>
+      <li>¿Tolera fallas?</li>
+      <li>¿Se puede probar sin depender de todo el sistema?</li>
+    </ul>
+    <p>
+      Si una solución no puede responder estas preguntas, todavía no está lista desde el punto de vista arquitectónico.
+    </p>
   </div>
 </section>
